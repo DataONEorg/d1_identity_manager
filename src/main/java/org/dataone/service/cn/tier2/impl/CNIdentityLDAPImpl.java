@@ -67,10 +67,12 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	    Attribute objClasses = new BasicAttribute("objectclass");
 	    objClasses.add("top");
 	    objClasses.add("groupOfUniqueNames");
-	    //objClasses.add("d1Group"); - will allow admin property
+	    objClasses.add("d1Group");
 	    Attribute cn = new BasicAttribute("cn", parseAttribute(groupName.getValue(), "cn"));
 	    // 'uniqueMember' is required - so no empty groups!
 	    Attribute uniqueMember = new BasicAttribute("uniqueMember", "");
+	    // TODO: need the Principal who created the group (will be in cert)
+	    Attribute adminIdentity = new BasicAttribute("adminIdentity", "");
 	    // the DN for the group
 	    String dn = groupName.getValue();
 	   
@@ -80,6 +82,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	        orig.put(objClasses);
 	        orig.put(cn);
 	        orig.put(uniqueMember);
+	        orig.put(adminIdentity);
 	        ctx.createSubcontext(dn, orig);
 	        System.out.println( "Created group " + dn + ".");
 	    } catch (NameAlreadyBoundException e) {
@@ -183,12 +186,9 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	        
 	        /* construct the list of modifications to make */
 	        ModificationItem[] mods = new ModificationItem[1];
-	        Attribute mod0 = new BasicAttribute("givenname", "verified");
-	        // TODO: handle custom D1 attributes
-	        //Attribute mod0 = new BasicAttribute("isVerified", Boolean.TRUE.toString());
-
 	        // Update isVerified attribute
-	        mods[0] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, mod0);
+		    Attribute isVerified = new BasicAttribute("isVerified", Boolean.TRUE.toString().toUpperCase());
+	        mods[0] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, isVerified);
 	        
 	        /* make the change */
 	        ctx.modifyAttributes(principal.getValue(), mods);
@@ -207,10 +207,13 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	    objClasses.add("person");
 	    objClasses.add("organizationalPerson");
 	    objClasses.add("inetOrgPerson");
+	    objClasses.add("d1Principal");
 	    Attribute cn = new BasicAttribute("cn", parseAttribute(p.getValue(), "cn"));
 	    // TODO handle actual name if we have it
 	    Attribute sn = new BasicAttribute("sn", parseAttribute(p.getValue(), "cn"));
 	    //Attribute givenNames = new BasicAttribute("givenname", "");
+	    Attribute isVerified = new BasicAttribute("isVerified", Boolean.FALSE.toString().toUpperCase());
+
 	    // Specify the DN we're adding */
 	    String dn = p.getValue();
 	   
@@ -221,6 +224,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	        orig.put(cn);
 	        orig.put(sn);
 	        //orig.put(givenNames);
+	        orig.put(isVerified);
 	        // Add the entry
 	        ctx.createSubcontext(dn, orig);
 	        System.out.println( "Added entry " + dn + ".");
@@ -271,7 +275,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	            ctx.search(principal.getValue(), searchCriteria, ctls);
 	        return (results != null && results.hasMoreElements());
 	    } catch (NamingException e) {
-	        System.err.println("Comparison of value person failed.");
+	        System.err.println("Check attribute failed");
 	    }
 	    return false;
 		
@@ -287,7 +291,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	public static void main(String[] args) {
 		try {
 			Principal p = new Principal();
-			p.setValue("cn=test2,dc=nceas,dc=ucsb,dc=edu");
+			p.setValue("cn=test4,dc=nceas,dc=ucsb,dc=edu");
 			List<Principal> members = new ArrayList<Principal>();
 			members.add(p);
 			
@@ -297,12 +301,12 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();		
 			identityService.registerAccount(p);
 			identityService.verifyAccount(p);
-			boolean check = identityService.checkAttribute(p, "givenname", "verifiedsdfsdf");
+			boolean check = identityService.checkAttribute(p, "isVerified", "TRUE");
 			if (check) {
 		        System.out.println("check passed!");
 			}
-			identityService.createGroup(groupName);
-			identityService.addGroupMembers(groupName, members);
+			//identityService.createGroup(groupName);
+			//identityService.addGroupMembers(groupName, members);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
