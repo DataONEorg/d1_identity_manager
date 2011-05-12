@@ -1,0 +1,39 @@
+# OID - using UCSB id - DataONE id is requested
+# 16772
+#  University of California, Santa Barbara
+#    Scott Gilbert
+#      scott.gilbert&isc.ucsb.edu     
+# OID macros
+objectIdentifier myOID  			1.3.6.1.4.1.16772
+objectIdentifier mySNMP 			myOID:1
+objectIdentifier myLDAP 			myOID:2
+objectIdentifier myAttributeType	myLDAP:1
+objectIdentifier myObjectClass		myLDAP:2
+# d1Principal attributes
+attributetype ( myAttributeType:1 NAME 'isVerified'
+        DESC 'boolean flag denoting if the entity is verified'
+        EQUALITY booleanMatch
+        SYNTAX 1.3.6.1.4.1.1466.115.121.1.7 
+        SINGLE-VALUE )
+attributetype ( myAttributeType:2 NAME 'equivalentIdentity'
+        DESC 'identity (DN) considered equivalent to this identity'
+        EQUALITY distinguishedNameMatch
+        SYNTAX 1.3.6.1.4.1.1466.115.121.1.12 )
+attributetype ( myAttributeType:3 NAME 'equivalentIdentityRequest'
+        DESC 'identity equivalence request'
+        EQUALITY distinguishedNameMatch
+        SYNTAX 1.3.6.1.4.1.1466.115.121.1.12 )        
+objectclass ( myObjectClass:1 NAME 'd1Principal'
+        DESC 'DataONE principal extension'
+        AUXILIARY
+        MAY ( equivalentIdentity $ equivalentIdentityRequest )
+        MUST isVerified )
+# d1Group attributes        
+attributetype ( myAttributeType:4 NAME 'adminIdentity'
+        DESC 'identities that can administer the group'
+        EQUALITY distinguishedNameMatch
+        SYNTAX 1.3.6.1.4.1.1466.115.121.1.12 )        
+objectclass ( myObjectClass:2 NAME 'd1Group'
+        DESC 'DataONE group extension'
+        AUXILIARY
+        MUST adminIdentity )        
