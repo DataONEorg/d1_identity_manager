@@ -231,7 +231,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	    } catch (NameAlreadyBoundException e) {
 	        /* If entry exists already, fine.  Ignore this error. */
 	        System.out.println("Entry " + dn + " already exists, no need to add");
-	        return false;
+	        //return false;
 	    } catch (NamingException e) {
 	        System.err.println("Problem adding entry." + e);
 	        return false;
@@ -261,8 +261,21 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	    return ctx;
 	}
 	
+	
+	public boolean removePrincipal(Principal p) {
+		try {
+			DirContext ctx = getContext();
+			ctx.destroySubcontext(p.getValue());
+
+	    } catch (NamingException e) {
+	        System.err.println("Check attribute failed");
+	        return false;
+	    }
+	    return true;
+	}
+	
 	// check the attribute for a given principal
-	private boolean checkAttribute(Principal principal, String attributeName, String attributeValue) {
+	public boolean checkAttribute(Principal principal, String attributeName, String attributeValue) {
 		try {
 			DirContext ctx = getContext();
 			SearchControls ctls = new SearchControls();
@@ -290,23 +303,13 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	
 	public static void main(String[] args) {
 		try {
-			Principal p = new Principal();
-			p.setValue("cn=test4,dc=nceas,dc=ucsb,dc=edu");
-			List<Principal> members = new ArrayList<Principal>();
-			members.add(p);
 			
 			Principal groupName = new Principal();
-			groupName.setValue("cn=testGroup,dc=nceas,dc=ucsb,dc=edu");
+			groupName.setValue("cn=test4,dc=nceas,dc=ucsb,dc=edu");
+		
+			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
+			identityService.removePrincipal(groupName);
 			
-			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();		
-			identityService.registerAccount(p);
-			identityService.verifyAccount(p);
-			boolean check = identityService.checkAttribute(p, "isVerified", "TRUE");
-			if (check) {
-		        System.out.println("check passed!");
-			}
-			//identityService.createGroup(groupName);
-			//identityService.addGroupMembers(groupName, members);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
