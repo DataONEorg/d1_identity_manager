@@ -26,6 +26,7 @@ import org.dataone.service.exceptions.NotFound;
 import org.dataone.service.exceptions.NotImplemented;
 import org.dataone.service.exceptions.ServiceFailure;
 import org.dataone.service.types.AuthToken;
+import org.dataone.service.types.Person;
 import org.dataone.service.types.Principal;
 
 
@@ -200,7 +201,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 		return true;
 	}
 
-	public boolean registerAccount(Principal p) {
+	public Principal registerAccount(Person p) {
 	    // Values we'll use in creating the entry
 	    Attribute objClasses = new BasicAttribute("objectclass");
 	    objClasses.add("top");
@@ -208,14 +209,16 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	    objClasses.add("organizationalPerson");
 	    objClasses.add("inetOrgPerson");
 	    objClasses.add("d1Principal");
-	    Attribute cn = new BasicAttribute("cn", parseAttribute(p.getValue(), "cn"));
+	    Attribute cn = new BasicAttribute("cn", p.getFamilyName());
 	    // TODO handle actual name if we have it
-	    Attribute sn = new BasicAttribute("sn", parseAttribute(p.getValue(), "cn"));
-	    //Attribute givenNames = new BasicAttribute("givenname", "");
+	    Attribute sn = new BasicAttribute("sn", p.getFamilyName());
+	    Attribute givenNames = new BasicAttribute("givenname", p.getGivenNames());
 	    Attribute isVerified = new BasicAttribute("isVerified", Boolean.FALSE.toString().toUpperCase());
 
-	    // Specify the DN we're adding */
-	    String dn = p.getValue();
+	    // Specify the DN we're adding
+	    // TODO: do we create the principal, or is it a given?
+	    Principal principal = p.getPrincipal();
+	    String dn = principal.getValue();
 	   
 	    try {
 		    DirContext ctx = getContext();
@@ -234,9 +237,9 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	        //return false;
 	    } catch (NamingException e) {
 	        System.err.println("Problem adding entry." + e);
-	        return false;
+	        return null;
 	    }
-		return true;
+		return principal;
 	}
 	
 	private DirContext getContext() throws NamingException {
