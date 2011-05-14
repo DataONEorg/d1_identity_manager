@@ -172,7 +172,8 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	        }
 	        
 		} catch (NamingException e) {
-	        throw new ServiceFailure(null, e.getMessage());
+			e.printStackTrace();
+	        return false;
 	    }		
 		
 		return true;
