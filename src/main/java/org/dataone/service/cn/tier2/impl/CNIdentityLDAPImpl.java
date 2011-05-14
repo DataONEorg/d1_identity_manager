@@ -17,6 +17,8 @@ import javax.naming.directory.InitialDirContext;
 import javax.naming.directory.ModificationItem;
 import javax.naming.directory.SearchControls;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.dataone.service.cn.tier2.CNIdentity;
 import org.dataone.service.exceptions.IdentifierNotUnique;
 import org.dataone.service.exceptions.InvalidRequest;
@@ -47,7 +49,10 @@ import org.dataone.service.types.Principal;
  *
  */
 public class CNIdentityLDAPImpl implements CNIdentity {
-
+	
+	public static Log log = LogFactory.getLog(CNIdentityLDAPImpl.class);
+	
+	// TODO: parameterize or configure somewhere else
 	private String server = "ldap://fred.msi.ucsb.edu:389";
 	private String admin = "cn=admin,dc=nceas,dc=ucsb,dc=edu";
 	private String password = "password";
@@ -85,13 +90,13 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	        orig.put(uniqueMember);
 	        orig.put(adminIdentity);
 	        ctx.createSubcontext(dn, orig);
-	        System.out.println( "Created group " + dn + ".");
+	        log.debug( "Created group " + dn + ".");
 	    } catch (NameAlreadyBoundException e) {
 	        /* If entry exists already, fine.  Ignore this error. */
-	        System.out.println("Group " + dn + " already exists, no need to create");
+	    	log.warn("Group " + dn + " already exists, no need to create");
 	        //return true;
 	    } catch (NamingException e) {
-	        System.err.println("Problem creating group." + e);
+	    	log.error("Problem creating group." + e);
 	        return false;
 	    }
 	    
@@ -117,7 +122,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 		        mods[0] = new ModificationItem(DirContext.ADD_ATTRIBUTE, mod0);
 		        // make the change
 		        ctx.modifyAttributes(groupName.getValue(), mods);
-		        System.out.println( "Modification was successful." );
+		        log.debug("Added member: " + principal.getValue() + " to group: " + groupName.getValue() );
 	        }
 	    } catch (NamingException e) {
 	        throw new ServiceFailure(null, e.getMessage());
@@ -151,7 +156,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 		        mods[1] = new ModificationItem(DirContext.REMOVE_ATTRIBUTE, mod1);
 		        // make the change
 		        ctx.modifyAttributes(primaryPrincipal.getValue(), mods);
-		        System.out.println("Successfully set equivalentIdentity: " + primaryPrincipal.getValue() + " = " + secondaryPrincipal.getValue());
+		        log.debug("Successfully set equivalentIdentity: " + primaryPrincipal.getValue() + " = " + secondaryPrincipal.getValue());
 		    
 		        // update attribute on secondaryPrincipal
 		        mods = new ModificationItem[1];
@@ -159,7 +164,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 		        mods[0] = new ModificationItem(DirContext.ADD_ATTRIBUTE, mod0);
 		        // make the change
 		        ctx.modifyAttributes(secondaryPrincipal.getValue(), mods);
-		        System.out.println("Successfully set reciprocal equivalentIdentity: " + secondaryPrincipal.getValue() + " = " + primaryPrincipal.getValue());
+		        log.debug("Successfully set reciprocal equivalentIdentity: " + secondaryPrincipal.getValue() + " = " + primaryPrincipal.getValue());
 	        } else {
 	        	// mark secondary as having the equivalentIdentityRequest
 		        mods = new ModificationItem[1];
@@ -167,7 +172,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 		        mods[0] = new ModificationItem(DirContext.ADD_ATTRIBUTE, mod0);
 		        // make the change
 		        ctx.modifyAttributes(secondaryPrincipal.getValue(), mods);
-		        System.out.println("Successfully set equivalentIdentityRequest on: " + secondaryPrincipal.getValue() + " for " + primaryPrincipal.getValue());
+		        log.debug("Successfully set equivalentIdentityRequest on: " + secondaryPrincipal.getValue() + " for " + primaryPrincipal.getValue());
 		    
 	        }
 	        
@@ -194,7 +199,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	        
 	        /* make the change */
 	        ctx.modifyAttributes(principal.getValue(), mods);
-	        System.out.println( "Modification was successful." );
+	        log.debug( "Verified principal: " + principal.getValue() );
 	    } catch (NamingException e) {
 	        throw new ServiceFailure(null, e.getMessage());
 	    }		
@@ -231,13 +236,13 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	        orig.put(isVerified);
 	        // Add the entry
 	        ctx.createSubcontext(dn, orig);
-	        System.out.println( "Added entry " + dn + ".");
+	        log.debug( "Added entry " + dn);
 	    } catch (NameAlreadyBoundException e) {
 	        /* If entry exists already, fine.  Ignore this error. */
-	        System.out.println("Entry " + dn + " already exists, no need to add");
+	    	log.warn("Entry " + dn + " already exists, no need to add", e);
 	        //return false;
 	    } catch (NamingException e) {
-	        System.err.println("Problem adding entry." + e);
+	    	log.error("Problem adding entry: " + dn, e);
 	        return null;
 	    }
 		return principal;
@@ -272,7 +277,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 			ctx.destroySubcontext(p.getValue());
 
 	    } catch (NamingException e) {
-	        System.err.println("Check attribute failed");
+	    	log.error("Error removing entry: " + p.getValue(), e);
 	        return false;
 	    }
 	    return true;
@@ -292,7 +297,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	            ctx.search(principal.getValue(), searchCriteria, ctls);
 	        return (results != null && results.hasMoreElements());
 	    } catch (NamingException e) {
-	        System.err.println("Check attribute failed");
+	    	log.error("Problem checking attribute: " + attributeName, e);
 	    }
 	    return false;
 		
