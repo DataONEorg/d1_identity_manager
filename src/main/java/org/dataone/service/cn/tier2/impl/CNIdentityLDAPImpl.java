@@ -54,9 +54,8 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	
 	// TODO: parameterize or configure somewhere else
 	private String server = "ldap://fred.msi.ucsb.edu:389";
-	private String admin = "cn=admin,dc=nceas,dc=ucsb,dc=edu";
+	private String admin = "cn=admin,dc=dataone,dc=org";
 	private String password = "password";
-	private String base ="dc=nceas,dc=ucsb,dc=edu";
 	
 	public boolean confirmMapIdentity(AuthToken token1, AuthToken token2)
 			throws ServiceFailure, InvalidToken, NotAuthorized, NotFound,
