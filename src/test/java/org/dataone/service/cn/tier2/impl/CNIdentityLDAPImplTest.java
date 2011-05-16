@@ -20,9 +20,9 @@ import org.junit.Test;
  */
 public class CNIdentityLDAPImplTest {
 	
-	private String primaryPrincipal = "cn=test1,dc=nceas,dc=ucsb,dc=edu";
-	private String secondaryPrincipal = "cn=test2,dc=nceas,dc=ucsb,dc=edu";
-	private String groupPrincipal = "cn=testGroup,dc=nceas,dc=ucsb,dc=edu";
+	private String primaryPrincipal = "cn=test1,dc=dataone,dc=org";
+	private String secondaryPrincipal = "cn=test2,dc=dataone,dc=org";
+	private String groupPrincipal = "cn=testGroup,dc=dataone,dc=org";
 
 	
     @Test
