@@ -38,7 +38,7 @@ public class CNIdentityLDAPImplTest {
 			Person person = new Person();
 			person.setPrincipal(principal);
 			person.setFamilyName("test1");
-			person.setGivenNames(Arrays.asList(new String[] {"test1"}));
+			person.setGivenNameList(Arrays.asList(new String[] {"test1"}));
 			
 			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
 			identityService.setServer(server);
@@ -77,7 +77,7 @@ public class CNIdentityLDAPImplTest {
 			Person person = new Person();
 			person.setPrincipal(principal);
 			person.setFamilyName("test1");
-			person.setGivenNames(Arrays.asList(new String[] {"test1"}));
+			person.setGivenNameList(Arrays.asList(new String[] {"test1"}));
 			
 			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
 			identityService.setServer(serverReplica);
@@ -115,14 +115,14 @@ public class CNIdentityLDAPImplTest {
 			Person person1 = new Person();
 			person1.setPrincipal(p1);
 			person1.setFamilyName("test1");
-			person1.setGivenNames(Arrays.asList(new String[] {"test1"}));
+			person1.setGivenNameList(Arrays.asList(new String[] {"test1"}));
 			
 			Principal p2 = new Principal();
 			p2.setValue(secondaryPrincipal);
 			Person person2 = new Person();
 			person2.setPrincipal(p2);
 			person2.setFamilyName("test2");
-			person2.setGivenNames(Arrays.asList(new String[] {"test1"}));
+			person2.setGivenNameList(Arrays.asList(new String[] {"test1"}));
 			
 			Principal groupName = new Principal();
 			groupName.setValue(groupPrincipal);
@@ -170,14 +170,14 @@ public class CNIdentityLDAPImplTest {
 			Person person1 = new Person();
 			person1.setPrincipal(p1);
 			person1.setFamilyName("test1");
-			person1.setGivenNames(Arrays.asList(new String[] {"test1"}));
+			person1.setGivenNameList(Arrays.asList(new String[] {"test1"}));
 			
 			Principal p2 = new Principal();
 			p2.setValue(secondaryPrincipal);
 			Person person2 = new Person();
 			person2.setPrincipal(p2);
 			person2.setFamilyName("test2");
-			person2.setGivenNames(Arrays.asList(new String[] {"test1"}));
+			person2.setGivenNameList(Arrays.asList(new String[] {"test1"}));
 			
 			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();		
 			boolean check = false;
@@ -234,7 +234,7 @@ public class CNIdentityLDAPImplTest {
 			Person person = new Person();
 			person.setPrincipal(principal);
 			person.setFamilyName("test1");
-			person.setGivenNames(Arrays.asList(new String[] {"test1"}));
+			person.setGivenNameList(Arrays.asList(new String[] {"test1"}));
 			
 			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
 			Principal p = identityService.registerAccount(person);

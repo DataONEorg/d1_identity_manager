@@ -217,7 +217,10 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	    Attribute cn = new BasicAttribute("cn", p.getFamilyName());
 	    // TODO handle actual name if we have it
 	    Attribute sn = new BasicAttribute("sn", p.getFamilyName());
-	    Attribute givenNames = new BasicAttribute("givenname", p.getGivenNames());
+	    Attribute givenNames = new BasicAttribute("givenname");
+	    for (String givenName: p.getGivenNameList()) {
+	    	givenNames.add(givenName);
+	    }
 	    Attribute isVerified = new BasicAttribute("isVerified", Boolean.FALSE.toString().toUpperCase());
 
 	    // Specify the DN we're adding
