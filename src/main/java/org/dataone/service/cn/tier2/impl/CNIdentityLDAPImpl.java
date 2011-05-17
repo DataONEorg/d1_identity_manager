@@ -28,8 +28,10 @@ import org.dataone.service.exceptions.NotFound;
 import org.dataone.service.exceptions.NotImplemented;
 import org.dataone.service.exceptions.ServiceFailure;
 import org.dataone.service.types.AuthToken;
+import org.dataone.service.types.Group;
 import org.dataone.service.types.Person;
 import org.dataone.service.types.Principal;
+import org.dataone.service.types.PrincipalList;
 
 
 /**
@@ -102,8 +104,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 		return true;
 	}
 	
-	// TODO: must override the interface method!
-    public boolean addGroupMembers(Principal groupName, List<Principal> members) 
+    public boolean addGroupMembers(Principal groupName, PrincipalList members) 
     	throws ServiceFailure, InvalidToken, NotAuthorized, NotFound, NotImplemented, InvalidRequest {
     	
     	try {
@@ -112,9 +113,17 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	        
 	        // TODO: check that they have admin rights for group
 	        
-	        for (Principal principal: members) {
+	        //collect all the principals from groups and people
+	        List<Principal> principals = new ArrayList<Principal>();
+	        for (Group group: members.getGroupList()) {
+	        	principals.add(group.getPrincipal());
+	        }
+	        for (Person person: members.getPersonList()) {
+	        	principals.add(person.getPrincipal());
+	        }
+	        for (Principal principal: principals) {
 		        // TODO: check that they are not already a member
-
+	        	
 		        // add them as a member
 		        ModificationItem[] mods = new ModificationItem[1];
 		        Attribute mod0 = new BasicAttribute("uniqueMember", principal.getValue());
@@ -130,6 +139,40 @@ public class CNIdentityLDAPImpl implements CNIdentity {
     	return true;
     	
     }
+    
+    public boolean removeGroupMembers(Principal groupName, PrincipalList members) 
+		throws ServiceFailure, InvalidToken, NotAuthorized, NotFound, NotImplemented, InvalidRequest {
+		
+		try {
+	        // context
+	        DirContext ctx = getContext();
+	        
+	        // TODO: check that they have admin rights for group
+	        
+	        //collect all the principals from groups and people
+	        List<Principal> principals = new ArrayList<Principal>();
+	        for (Group group: members.getGroupList()) {
+	        	principals.add(group.getPrincipal());
+	        }
+	        for (Person person: members.getPersonList()) {
+	        	principals.add(person.getPrincipal());
+	        }
+	        for (Principal principal: principals) {	        	
+		        // remove them as a member
+		        ModificationItem[] mods = new ModificationItem[1];
+		        Attribute mod0 = new BasicAttribute("uniqueMember", principal.getValue());
+		        mods[0] = new ModificationItem(DirContext.REMOVE_ATTRIBUTE, mod0);
+		        // make the change
+		        ctx.modifyAttributes(groupName.getValue(), mods);
+		        log.debug("Removed member: " + principal.getValue() + " from group: " + groupName.getValue() );
+	        }
+	    } catch (NamingException e) {
+	        throw new ServiceFailure(null, e.getMessage());
+	    }
+		
+		return true;
+		
+	}
 
 	public boolean mapIdentity(Principal primaryPrincipal, Principal secondaryPrincipal)
 			throws ServiceFailure, InvalidToken, NotAuthorized, NotFound,
@@ -248,6 +291,19 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	        return null;
 	    }
 		return principal;
+	}
+	
+	// TODO: implement
+	public PrincipalList getPrincipalInfo(Principal principal)
+    	throws ServiceFailure, InvalidToken, NotAuthorized, NotImplemented {
+		throw new NotImplemented(null, "getPrincipalInfo not implemented yet");
+
+	}
+	
+	// TODO: implement
+	public PrincipalList listPrincipals(String query, int start, int count)
+	    throws ServiceFailure, InvalidToken, NotAuthorized, NotImplemented {
+		throw new NotImplemented(null, "listPrincipals not implemented yet");
 	}
 	
 	private DirContext getContext() throws NamingException {
