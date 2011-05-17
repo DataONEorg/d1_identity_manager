@@ -12,6 +12,7 @@ import java.util.List;
 
 import org.dataone.service.types.Person;
 import org.dataone.service.types.Principal;
+import org.dataone.service.types.PrincipalList;
 import org.junit.Test;
 
 /**
@@ -127,9 +128,9 @@ public class CNIdentityLDAPImplTest {
 			Principal groupName = new Principal();
 			groupName.setValue(groupPrincipal);
 			
-			List<Principal> members = new ArrayList<Principal>();
-			members.add(p1);
-			members.add(p2);
+			PrincipalList members = new PrincipalList();
+			members.addPerson(person1);
+			members.addPerson(person2);
 			
 			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();		
 			boolean check = false;
