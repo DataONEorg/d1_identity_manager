@@ -270,6 +270,30 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	}
 	
 	
+	public String getServer() {
+		return server;
+	}
+
+	public void setServer(String server) {
+		this.server = server;
+	}
+
+	public String getAdmin() {
+		return admin;
+	}
+
+	public void setAdmin(String admin) {
+		this.admin = admin;
+	}
+
+	public String getPassword() {
+		return password;
+	}
+
+	public void setPassword(String password) {
+		this.password = password;
+	}
+
 	public boolean removePrincipal(Principal p) {
 		try {
 			DirContext ctx = getContext();
@@ -312,11 +336,11 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	public static void main(String[] args) {
 		try {
 			
-			Principal groupName = new Principal();
-			groupName.setValue("cn=test4,dc=nceas,dc=ucsb,dc=edu");
+			Principal p = new Principal();
+			p.setValue("cn=test1,dc=dataone,dc=org");
 		
 			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
-			identityService.removePrincipal(groupName);
+			identityService.removePrincipal(p);
 			
 		} catch (Exception e) {
 			e.printStackTrace();

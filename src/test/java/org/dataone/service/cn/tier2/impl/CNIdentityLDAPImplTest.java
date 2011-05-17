@@ -20,15 +20,19 @@ import org.junit.Test;
  */
 public class CNIdentityLDAPImplTest {
 	
+	private String server = "ldap://fred.msi.ucsb.edu:389";
+	private String serverReplica = "ldap://bespin.nceas.ucsb.edu:389";
+
 	private String primaryPrincipal = "cn=test1,dc=dataone,dc=org";
 	private String secondaryPrincipal = "cn=test2,dc=dataone,dc=org";
 	private String groupPrincipal = "cn=testGroup,dc=dataone,dc=org";
 
 	
-    @Test
-    public void verifyPrincipal()  {
-
-    	try {
+	@Test
+	public void checkOneWayReplication()  {
+	
+		try {
+			
 			Principal principal = new Principal();
 			principal.setValue(primaryPrincipal);
 			Person person = new Person();
@@ -37,16 +41,61 @@ public class CNIdentityLDAPImplTest {
 			person.setGivenNames(Arrays.asList(new String[] {"test1"}));
 			
 			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
+			identityService.setServer(server);
 			Principal p = identityService.registerAccount(person);
 			assertNotNull(p);
 			
 			boolean check = false;
-			check = identityService.verifyAccount(p);
-			assertTrue(check);
-			check = identityService.checkAttribute(p, "isVerified", "TRUE");
+			
+			// wait for replication to occur
+			Thread.sleep(5000);
+			
+			// check it on the other server
+			identityService.setServer(serverReplica);
+			check = identityService.checkAttribute(p, "isVerified", "FALSE");
 			assertTrue(check);
 			
 			//clean up
+			identityService.setServer(server);
+			check = identityService.removePrincipal(p);
+			assertTrue(check);
+	
+		} catch (Exception e) {
+			fail();
+			e.printStackTrace();
+		}
+	
+	}
+	
+    @Test
+    public void checkOtherWayReplication()  {
+
+    	try {
+    		
+			Principal principal = new Principal();
+			principal.setValue(primaryPrincipal);
+			Person person = new Person();
+			person.setPrincipal(principal);
+			person.setFamilyName("test1");
+			person.setGivenNames(Arrays.asList(new String[] {"test1"}));
+			
+			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
+			identityService.setServer(serverReplica);
+			Principal p = identityService.registerAccount(person);
+			assertNotNull(p);
+			
+			boolean check = false;
+			
+			// wait for replication to occur
+			Thread.sleep(5000);
+			
+			// check it on the other server
+			identityService.setServer(server);
+			check = identityService.checkAttribute(p, "isVerified", "FALSE");
+			assertTrue(check);
+			
+			//clean up
+			identityService.setServer(serverReplica);
 			check = identityService.removePrincipal(p);
 			assertTrue(check);
 
@@ -175,4 +224,38 @@ public class CNIdentityLDAPImplTest {
 		}
 	
 	}
+
+	@Test
+	public void verifyPrincipal()  {
+	
+		try {
+			Principal principal = new Principal();
+			principal.setValue(primaryPrincipal);
+			Person person = new Person();
+			person.setPrincipal(principal);
+			person.setFamilyName("test1");
+			person.setGivenNames(Arrays.asList(new String[] {"test1"}));
+			
+			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
+			Principal p = identityService.registerAccount(person);
+			assertNotNull(p);
+			
+			boolean check = false;
+			check = identityService.verifyAccount(p);
+			assertTrue(check);
+			check = identityService.checkAttribute(p, "isVerified", "TRUE");
+			assertTrue(check);
+			
+			//clean up
+			check = identityService.removePrincipal(p);
+			assertTrue(check);
+	
+		} catch (Exception e) {
+			fail();
+			e.printStackTrace();
+		}
+	
+	}
+
+	
 }
