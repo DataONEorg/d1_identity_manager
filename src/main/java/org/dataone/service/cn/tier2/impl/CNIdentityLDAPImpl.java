@@ -30,8 +30,8 @@ import org.dataone.service.exceptions.ServiceFailure;
 import org.dataone.service.types.AuthToken;
 import org.dataone.service.types.Group;
 import org.dataone.service.types.Person;
-import org.dataone.service.types.Principal;
-import org.dataone.service.types.PrincipalList;
+import org.dataone.service.types.Subject;
+import org.dataone.service.types.SubjectList;
 
 
 /**
@@ -66,7 +66,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 		return false;
 	}
 
-	public boolean createGroup(Principal groupName) throws ServiceFailure,
+	public boolean createGroup(Subject groupName) throws ServiceFailure,
 			InvalidToken, NotAuthorized, NotFound, NotImplemented,
 			InvalidRequest, IdentifierNotUnique {
 		
@@ -81,7 +81,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	    Attribute cn = new BasicAttribute("cn", parseAttribute(groupName.getValue(), "cn"));
 	    // 'uniqueMember' is required - so no empty groups!
 	    Attribute uniqueMember = new BasicAttribute("uniqueMember", "");
-	    // TODO: need the Principal who created the group (will be in cert)
+	    // TODO: need the Subject who created the group (will be in cert)
 	    Attribute adminIdentity = new BasicAttribute("adminIdentity", "");
 	    // the DN for the group
 	    String dn = groupName.getValue();
@@ -107,7 +107,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 		return true;
 	}
 	
-    public boolean addGroupMembers(Principal groupName, PrincipalList members) 
+    public boolean addGroupMembers(Subject groupName, SubjectList members) 
     	throws ServiceFailure, InvalidToken, NotAuthorized, NotFound, NotImplemented, InvalidRequest {
     	
     	try {
@@ -116,24 +116,24 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	        
 	        // TODO: check that they have admin rights for group
 	        
-	        //collect all the principals from groups and people
-	        List<Principal> principals = new ArrayList<Principal>();
+	        //collect all the subjects from groups and people
+	        List<Subject> subjects = new ArrayList<Subject>();
 	        for (Group group: members.getGroupList()) {
-	        	principals.add(group.getPrincipal());
+	        	subjects.add(group.getSubject());
 	        }
 	        for (Person person: members.getPersonList()) {
-	        	principals.add(person.getPrincipal());
+	        	subjects.add(person.getSubject());
 	        }
-	        for (Principal principal: principals) {
+	        for (Subject subject: subjects) {
 		        // TODO: check that they are not already a member
 	        	
 		        // add them as a member
 		        ModificationItem[] mods = new ModificationItem[1];
-		        Attribute mod0 = new BasicAttribute("uniqueMember", principal.getValue());
+		        Attribute mod0 = new BasicAttribute("uniqueMember", subject.getValue());
 		        mods[0] = new ModificationItem(DirContext.ADD_ATTRIBUTE, mod0);
 		        // make the change
 		        ctx.modifyAttributes(groupName.getValue(), mods);
-		        log.debug("Added member: " + principal.getValue() + " to group: " + groupName.getValue() );
+		        log.debug("Added member: " + subject.getValue() + " to group: " + groupName.getValue() );
 	        }
 	    } catch (NamingException e) {
 	        throw new ServiceFailure(null, e.getMessage());
@@ -143,7 +143,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
     	
     }
     
-    public boolean removeGroupMembers(Principal groupName, PrincipalList members) 
+    public boolean removeGroupMembers(Subject groupName, SubjectList members) 
 		throws ServiceFailure, InvalidToken, NotAuthorized, NotFound, NotImplemented, InvalidRequest {
 		
 		try {
@@ -152,22 +152,22 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	        
 	        // TODO: check that they have admin rights for group
 	        
-	        //collect all the principals from groups and people
-	        List<Principal> principals = new ArrayList<Principal>();
+	        //collect all the subjects from groups and people
+	        List<Subject> subjects = new ArrayList<Subject>();
 	        for (Group group: members.getGroupList()) {
-	        	principals.add(group.getPrincipal());
+	        	subjects.add(group.getSubject());
 	        }
 	        for (Person person: members.getPersonList()) {
-	        	principals.add(person.getPrincipal());
+	        	subjects.add(person.getSubject());
 	        }
-	        for (Principal principal: principals) {	        	
+	        for (Subject subject: subjects) {	        	
 		        // remove them as a member
 		        ModificationItem[] mods = new ModificationItem[1];
-		        Attribute mod0 = new BasicAttribute("uniqueMember", principal.getValue());
+		        Attribute mod0 = new BasicAttribute("uniqueMember", subject.getValue());
 		        mods[0] = new ModificationItem(DirContext.REMOVE_ATTRIBUTE, mod0);
 		        // make the change
 		        ctx.modifyAttributes(groupName.getValue(), mods);
-		        log.debug("Removed member: " + principal.getValue() + " from group: " + groupName.getValue() );
+		        log.debug("Removed member: " + subject.getValue() + " from group: " + groupName.getValue() );
 	        }
 	    } catch (NamingException e) {
 	        throw new ServiceFailure(null, e.getMessage());
@@ -177,7 +177,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 		
 	}
 
-	public boolean mapIdentity(Principal primaryPrincipal, Principal secondaryPrincipal)
+	public boolean mapIdentity(Subject primarySubject, Subject secondarySubject)
 			throws ServiceFailure, InvalidToken, NotAuthorized, NotFound,
 			NotImplemented, InvalidRequest {
 
@@ -187,37 +187,37 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	        
 	        // check if primary is confirming secondary
 	        boolean confirmationRequest = 
-	        	checkAttribute(primaryPrincipal, "equivalentIdentityRequest", secondaryPrincipal.getValue());
+	        	checkAttribute(primarySubject, "equivalentIdentityRequest", secondarySubject.getValue());
 	        
 	        ModificationItem[] mods = null;
 	        Attribute mod0 = null;
 	        if (confirmationRequest) {
-		        // update attribute on primaryPrincipal
+		        // update attribute on primarySubject
 		        mods = new ModificationItem[2];
-		        mod0 = new BasicAttribute("equivalentIdentity", secondaryPrincipal.getValue());
+		        mod0 = new BasicAttribute("equivalentIdentity", secondarySubject.getValue());
 		        mods[0] = new ModificationItem(DirContext.ADD_ATTRIBUTE, mod0);
 		        // remove the request from primary since it is confirmed now
-		        Attribute mod1 = new BasicAttribute("equivalentIdentityRequest", secondaryPrincipal.getValue());
+		        Attribute mod1 = new BasicAttribute("equivalentIdentityRequest", secondarySubject.getValue());
 		        mods[1] = new ModificationItem(DirContext.REMOVE_ATTRIBUTE, mod1);
 		        // make the change
-		        ctx.modifyAttributes(primaryPrincipal.getValue(), mods);
-		        log.debug("Successfully set equivalentIdentity: " + primaryPrincipal.getValue() + " = " + secondaryPrincipal.getValue());
+		        ctx.modifyAttributes(primarySubject.getValue(), mods);
+		        log.debug("Successfully set equivalentIdentity: " + primarySubject.getValue() + " = " + secondarySubject.getValue());
 		    
-		        // update attribute on secondaryPrincipal
+		        // update attribute on secondarySubject
 		        mods = new ModificationItem[1];
-		        mod0 = new BasicAttribute("equivalentIdentity", primaryPrincipal.getValue());
+		        mod0 = new BasicAttribute("equivalentIdentity", primarySubject.getValue());
 		        mods[0] = new ModificationItem(DirContext.ADD_ATTRIBUTE, mod0);
 		        // make the change
-		        ctx.modifyAttributes(secondaryPrincipal.getValue(), mods);
-		        log.debug("Successfully set reciprocal equivalentIdentity: " + secondaryPrincipal.getValue() + " = " + primaryPrincipal.getValue());
+		        ctx.modifyAttributes(secondarySubject.getValue(), mods);
+		        log.debug("Successfully set reciprocal equivalentIdentity: " + secondarySubject.getValue() + " = " + primarySubject.getValue());
 	        } else {
 	        	// mark secondary as having the equivalentIdentityRequest
 		        mods = new ModificationItem[1];
-		        mod0 = new BasicAttribute("equivalentIdentityRequest", primaryPrincipal.getValue());
+		        mod0 = new BasicAttribute("equivalentIdentityRequest", primarySubject.getValue());
 		        mods[0] = new ModificationItem(DirContext.ADD_ATTRIBUTE, mod0);
 		        // make the change
-		        ctx.modifyAttributes(secondaryPrincipal.getValue(), mods);
-		        log.debug("Successfully set equivalentIdentityRequest on: " + secondaryPrincipal.getValue() + " for " + primaryPrincipal.getValue());
+		        ctx.modifyAttributes(secondarySubject.getValue(), mods);
+		        log.debug("Successfully set equivalentIdentityRequest on: " + secondarySubject.getValue() + " for " + primarySubject.getValue());
 		    
 	        }
 	        
@@ -229,7 +229,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 		return true;
 	}
 
-	public boolean verifyAccount(Principal principal) throws ServiceFailure,
+	public boolean verifyAccount(Subject subject) throws ServiceFailure,
 			NotAuthorized, NotImplemented, InvalidToken, InvalidRequest {
 		
 	    try {
@@ -243,8 +243,8 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	        mods[0] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, isVerified);
 	        
 	        /* make the change */
-	        ctx.modifyAttributes(principal.getValue(), mods);
-	        log.debug( "Verified principal: " + principal.getValue() );
+	        ctx.modifyAttributes(subject.getValue(), mods);
+	        log.debug( "Verified subject: " + subject.getValue() );
 	    } catch (NamingException e) {
 	        throw new ServiceFailure(null, e.getMessage());
 	    }		
@@ -252,7 +252,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 		return true;
 	}
 
-	public Principal registerAccount(Person p) {
+	public Subject registerAccount(Person p) {
 	    // Values we'll use in creating the entry
 	    Attribute objClasses = new BasicAttribute("objectclass");
 	    objClasses.add("top");
@@ -273,9 +273,9 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	    Attribute isVerified = new BasicAttribute("isVerified", Boolean.FALSE.toString().toUpperCase());
 
 	    // Specify the DN we're adding
-	    // TODO: do we create the principal, or is it a given?
-	    Principal principal = p.getPrincipal();
-	    String dn = principal.getValue();
+	    // TODO: do we create the subject, or is it a given?
+	    Subject subject = p.getSubject();
+	    String dn = subject.getValue();
 	   
 	    try {
 		    DirContext ctx = getContext();
@@ -305,15 +305,15 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	    	log.error("Problem adding entry: " + dn, e);
 	        return null;
 	    }
-		return principal;
+		return subject;
 	}
 	
 	// TODO: implement
-	public PrincipalList getPrincipalInfo(Principal principal)
+	public SubjectList getSubjectInfo(Subject subject)
     	throws ServiceFailure, InvalidToken, NotAuthorized, NotImplemented {
 
-		PrincipalList pList = new PrincipalList();
-	    String dn = principal.getValue();
+		SubjectList pList = new SubjectList();
+	    String dn = subject.getValue();
 		try {
 			DirContext ctx = getContext();
 			Attributes attributes = ctx.getAttributes(dn);
@@ -330,13 +330,13 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 				// process as Group
 				if (isGroup) {
 					Group group = new Group();
-					group.setPrincipal(principal);
+					group.setSubject(subject);
 					group.setGroupName((String) attributes.get("cn").get());
-					List<Principal> members = new ArrayList<Principal>();
+					List<Subject> members = new ArrayList<Subject>();
 					NamingEnumeration<String> uniqueMembers = (NamingEnumeration<String>) attributes.get("uniqueMember").getAll();
 					while (uniqueMembers.hasMore()) {
 						String uniqueMember = uniqueMembers.next();
-						Principal member = new Principal();
+						Subject member = new Subject();
 						member.setValue(uniqueMember);
 						members.add(member);
 					}
@@ -344,7 +344,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 					pList.addGroup(group);
 				} else {
 					Person person = new Person();
-					person.setPrincipal(principal);
+					person.setSubject(subject);
 
 					// get all attributes and process what we have
 					NamingEnumeration<? extends Attribute> values = attributes.getAll();
@@ -385,7 +385,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 							items = (NamingEnumeration<String>) attribute.getAll();
 							while (items.hasMore()) {
 								attributeValue = items.next();
-								Principal equivalentIdentity = new Principal();
+								Subject equivalentIdentity = new Subject();
 								equivalentIdentity.setValue(attributeValue);
 								person.addEquivalentIdentity(equivalentIdentity);
 								log.debug("Found attribute: " + attributeName + "=" + attributeValue);
@@ -396,7 +396,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 							items = (NamingEnumeration<String>) attribute.getAll();
 							while (items.hasMore()) {
 								attributeValue = items.next();
-								Principal group = new Principal();
+								Subject group = new Subject();
 								group.setValue(attributeValue);
 								person.addIsMemberOf(group);
 								log.debug("Found attribute: " + attributeName + "=" + attributeValue);
@@ -412,15 +412,15 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	    	log.error("Problem looking up entry: " + dn, e);
 		}
 		
-		log.debug("Retrieved PrincipalList for: " + dn);
+		log.debug("Retrieved SubjectList for: " + dn);
 		
 		return pList;
 	}
 	
 	// TODO: implement
-	public PrincipalList listPrincipals(String query, int start, int count)
+	public SubjectList listSubjects(String query, int start, int count)
 	    throws ServiceFailure, InvalidToken, NotAuthorized, NotImplemented {
-		throw new NotImplemented(null, "listPrincipals not implemented yet");
+		throw new NotImplemented(null, "listSubjects not implemented yet");
 	}
 	
 	private DirContext getContext() throws NamingException {
@@ -470,7 +470,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 		this.password = password;
 	}
 
-	public boolean removePrincipal(Principal p) {
+	public boolean removeSubject(Subject p) {
 		try {
 			DirContext ctx = getContext();
 			ctx.destroySubcontext(p.getValue());
@@ -483,8 +483,8 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	    return true;
 	}
 	
-	// check the attribute for a given principal
-	public boolean checkAttribute(Principal principal, String attributeName, String attributeValue) {
+	// check the attribute for a given subject
+	public boolean checkAttribute(Subject subject, String attributeName, String attributeValue) {
 		try {
 			DirContext ctx = getContext();
 			SearchControls ctls = new SearchControls();
@@ -494,7 +494,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 		    String searchCriteria = attributeName + "=" + attributeValue;
 		    
 	        NamingEnumeration results = 
-	            ctx.search(principal.getValue(), searchCriteria, ctls);
+	            ctx.search(subject.getValue(), searchCriteria, ctls);
 	        
 	        boolean result = (results != null && results.hasMoreElements());
 	        if (result) {
@@ -520,11 +520,11 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	public static void main(String[] args) {
 		try {
 			
-			Principal p = new Principal();
+			Subject p = new Subject();
 			p.setValue("cn=test1,dc=dataone,dc=org");
 		
 			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
-			identityService.removePrincipal(p);
+			identityService.removeSubject(p);
 			
 		} catch (Exception e) {
 			e.printStackTrace();
