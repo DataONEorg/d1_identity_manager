@@ -244,7 +244,7 @@ public class CNIdentityLDAPImplTest {
 			person.setPrincipal(principal);
 			person.setFamilyName("test1");
 			person.addGivenName("test1");
-			person.addEmail("test1@dataone.org");
+			//person.addEmail("test1@dataone.org");
 			
 			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
 			Principal p = identityService.registerAccount(person);

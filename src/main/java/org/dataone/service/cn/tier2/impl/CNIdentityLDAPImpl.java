@@ -281,10 +281,18 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 		    DirContext ctx = getContext();
 	        Attributes orig = new BasicAttributes();
 	        orig.put(objClasses);
-	        orig.put(cn);
-	        orig.put(sn);
-	        orig.put(givenNames);
-	        orig.put(mail);
+	        if (cn.getAll().hasMore()) {
+	        	orig.put(cn);
+	        }
+	        if (sn.getAll().hasMore()) {
+	        	orig.put(sn);
+	        }
+	        if (givenNames.getAll().hasMore()) {
+	        	orig.put(givenNames);
+	        }
+	        if (mail.getAll().hasMore()) {
+		        orig.put(mail);
+	        }
 	        orig.put(isVerified);
 	        // Add the entry
 	        ctx.createSubcontext(dn, orig);
