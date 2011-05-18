@@ -7,6 +7,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import org.dataone.service.types.Person;
+import org.dataone.service.types.Session;
 import org.dataone.service.types.Subject;
 import org.dataone.service.types.SubjectList;
 import org.junit.Test;
@@ -24,6 +25,11 @@ public class CNIdentityLDAPImplTest {
 	private String secondarySubject = "cn=test2,dc=dataone,dc=org";
 	private String groupSubject = "cn=testGroup,dc=dataone,dc=org";
 
+	private static Session getSession(Subject subject) {
+		Session session = new Session();
+		session.setSubject(subject);
+		return session;
+	}
 	
 	@Test
 	public void checkOneWayReplication()  {
@@ -40,7 +46,7 @@ public class CNIdentityLDAPImplTest {
 			
 			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
 			identityService.setServer(server);
-			Subject p = identityService.registerAccount(person);
+			Subject p = identityService.registerAccount(getSession(subject), person);
 			assertNotNull(p);
 			
 			boolean check = false;
@@ -80,7 +86,7 @@ public class CNIdentityLDAPImplTest {
 			
 			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
 			identityService.setServer(serverReplica);
-			Subject p = identityService.registerAccount(person);
+			Subject p = identityService.registerAccount(getSession(subject), person);
 			assertNotNull(p);
 			
 			boolean check = false;
@@ -136,17 +142,17 @@ public class CNIdentityLDAPImplTest {
 			boolean check = false;
 			
 			// create subjects
-			Subject subject = identityService.registerAccount(person1);
+			Subject subject = identityService.registerAccount(getSession(p1), person1);
 			assertNotNull(subject);
-			subject = identityService.registerAccount(person2);
+			subject = identityService.registerAccount(getSession(p2), person2);
 			assertNotNull(subject);
 			
 			// group
-			check = identityService.createGroup(groupName);
+			check = identityService.createGroup(getSession(p1), groupName);
 			assertTrue(check);
-			check = identityService.addGroupMembers(groupName, members);
+			check = identityService.addGroupMembers(getSession(p1), groupName, members);
 			assertTrue(check);
-			check = identityService.removeGroupMembers(groupName, members);
+			check = identityService.removeGroupMembers(getSession(p1), groupName, members);
 			assertTrue(check);
 			
 			// clean up (this is not required for service to be functioning)
@@ -188,13 +194,13 @@ public class CNIdentityLDAPImplTest {
 			boolean check = false;
 			
 			// create subjects
-			Subject subject = identityService.registerAccount(person1);
+			Subject subject = identityService.registerAccount(getSession(p1), person1);
 			assertNotNull(subject);
-			subject = identityService.registerAccount(person2);
+			subject = identityService.registerAccount(getSession(p2), person2);
 			assertNotNull(subject);
 			
 			// map p1 to p2
-			check = identityService.mapIdentity(p1, p2);
+			check = identityService.mapIdentity(getSession(p1), p2);
 			assertTrue(check);
 			// check pending
 			check = identityService.checkAttribute(p2, "equivalentIdentityRequest", p1.getValue());
@@ -208,7 +214,7 @@ public class CNIdentityLDAPImplTest {
 			check = identityService.checkAttribute(p2, "equivalentIdentity", p1.getValue());
 			assertFalse(check);
 			// accept request
-			check = identityService.mapIdentity(p2, p1);
+			check = identityService.mapIdentity(getSession(p2), p1);
 			assertTrue(check);
 			
 			// double check reciprocal mapping
@@ -243,11 +249,11 @@ public class CNIdentityLDAPImplTest {
 			//person.addEmail("test1@dataone.org");
 			
 			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
-			Subject p = identityService.registerAccount(person);
+			Subject p = identityService.registerAccount(getSession(subject), person);
 			assertNotNull(p);
 			
 			boolean check = false;
-			check = identityService.verifyAccount(p);
+			check = identityService.verifyAccount(getSession(subject), p);
 			assertTrue(check);
 			check = identityService.checkAttribute(p, "isVerified", "TRUE");
 			assertTrue(check);
@@ -280,11 +286,11 @@ public class CNIdentityLDAPImplTest {
 			person.addEmail(email);
 			
 			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
-			Subject p = identityService.registerAccount(person);
+			Subject p = identityService.registerAccount(getSession(subject), person);
 			assertNotNull(p);
 			
 			boolean check = false;
-			SubjectList subjectList = identityService.getSubjectInfo(p);
+			SubjectList subjectList = identityService.getSubjectInfo(getSession(subject), p);
 			assertNotNull(subjectList);
 			check = subjectList.getPerson(0).getEmail(0).equals(email);
 			assertTrue(check);

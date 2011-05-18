@@ -30,6 +30,7 @@ import org.dataone.service.exceptions.ServiceFailure;
 import org.dataone.service.types.AuthToken;
 import org.dataone.service.types.Group;
 import org.dataone.service.types.Person;
+import org.dataone.service.types.Session;
 import org.dataone.service.types.Subject;
 import org.dataone.service.types.SubjectList;
 
@@ -58,15 +59,8 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	private String server = "ldap://fred.msi.ucsb.edu:389";
 	private String admin = "cn=admin,dc=dataone,dc=org";
 	private String password = "password";
-	
-	public boolean confirmMapIdentity(AuthToken token1, AuthToken token2)
-			throws ServiceFailure, InvalidToken, NotAuthorized, NotFound,
-			NotImplemented, InvalidRequest {
-		// TODO Auto-generated method stub
-		return false;
-	}
 
-	public boolean createGroup(Subject groupName) throws ServiceFailure,
+	public boolean createGroup(Session session, Subject groupName) throws ServiceFailure,
 			InvalidToken, NotAuthorized, NotFound, NotImplemented,
 			InvalidRequest, IdentifierNotUnique {
 		
@@ -107,7 +101,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 		return true;
 	}
 	
-    public boolean addGroupMembers(Subject groupName, SubjectList members) 
+    public boolean addGroupMembers(Session session, Subject groupName, SubjectList members) 
     	throws ServiceFailure, InvalidToken, NotAuthorized, NotFound, NotImplemented, InvalidRequest {
     	
     	try {
@@ -143,7 +137,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
     	
     }
     
-    public boolean removeGroupMembers(Subject groupName, SubjectList members) 
+    public boolean removeGroupMembers(Session session, Subject groupName, SubjectList members) 
 		throws ServiceFailure, InvalidToken, NotAuthorized, NotFound, NotImplemented, InvalidRequest {
 		
 		try {
@@ -177,11 +171,14 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 		
 	}
 
-	public boolean mapIdentity(Subject primarySubject, Subject secondarySubject)
+	public boolean mapIdentity(Session session, Subject secondarySubject)
 			throws ServiceFailure, InvalidToken, NotAuthorized, NotFound,
 			NotImplemented, InvalidRequest {
 
 		try {
+			// primary subject in the session
+			Subject primarySubject = session.getSubject();
+			
 	        // get the context
 	        DirContext ctx = getContext();
 	        
@@ -229,7 +226,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 		return true;
 	}
 
-	public boolean verifyAccount(Subject subject) throws ServiceFailure,
+	public boolean verifyAccount(Session session, Subject subject) throws ServiceFailure,
 			NotAuthorized, NotImplemented, InvalidToken, InvalidRequest {
 		
 	    try {
@@ -252,7 +249,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 		return true;
 	}
 
-	public Subject registerAccount(Person p) {
+	public Subject registerAccount(Session session, Person p) {
 	    // Values we'll use in creating the entry
 	    Attribute objClasses = new BasicAttribute("objectclass");
 	    objClasses.add("top");
@@ -309,7 +306,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	}
 	
 	// TODO: implement
-	public SubjectList getSubjectInfo(Subject subject)
+	public SubjectList getSubjectInfo(Session session, Subject subject)
     	throws ServiceFailure, InvalidToken, NotAuthorized, NotImplemented {
 
 		SubjectList pList = new SubjectList();
@@ -418,7 +415,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	}
 	
 	// TODO: implement
-	public SubjectList listSubjects(String query, int start, int count)
+	public SubjectList listSubjects(Session session, String query, int start, int count)
 	    throws ServiceFailure, InvalidToken, NotAuthorized, NotImplemented {
 		throw new NotImplemented(null, "listSubjects not implemented yet");
 	}
