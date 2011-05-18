@@ -39,7 +39,8 @@ public class CNIdentityLDAPImplTest {
 			Person person = new Person();
 			person.setPrincipal(principal);
 			person.setFamilyName("test1");
-			person.setGivenNameList(Arrays.asList(new String[] {"test1"}));
+			person.addGivenName("test1");
+			person.addEmail("test1@dataone.org");
 			
 			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
 			identityService.setServer(server);
@@ -62,8 +63,8 @@ public class CNIdentityLDAPImplTest {
 			assertTrue(check);
 	
 		} catch (Exception e) {
-			fail();
 			e.printStackTrace();
+			fail();
 		}
 	
 	}
@@ -78,7 +79,8 @@ public class CNIdentityLDAPImplTest {
 			Person person = new Person();
 			person.setPrincipal(principal);
 			person.setFamilyName("test1");
-			person.setGivenNameList(Arrays.asList(new String[] {"test1"}));
+			person.addGivenName("test1");
+			person.addEmail("test1@dataone.org");
 			
 			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
 			identityService.setServer(serverReplica);
@@ -100,15 +102,15 @@ public class CNIdentityLDAPImplTest {
 			check = identityService.removePrincipal(p);
 			assertTrue(check);
 
-		} catch (Exception e) {
-			fail();
+    	} catch (Exception e) {
 			e.printStackTrace();
+			fail();
 		}
 
     }
     
     @Test
-    public void createGroup()  {
+    public void editGroup()  {
 
     	try {
 			Principal p1 = new Principal();
@@ -116,14 +118,16 @@ public class CNIdentityLDAPImplTest {
 			Person person1 = new Person();
 			person1.setPrincipal(p1);
 			person1.setFamilyName("test1");
-			person1.setGivenNameList(Arrays.asList(new String[] {"test1"}));
+			person1.addGivenName("test1");
+			person1.addEmail("test1@dataone.org");
 			
 			Principal p2 = new Principal();
 			p2.setValue(secondaryPrincipal);
 			Person person2 = new Person();
 			person2.setPrincipal(p2);
 			person2.setFamilyName("test2");
-			person2.setGivenNameList(Arrays.asList(new String[] {"test1"}));
+			person2.addGivenName("test2");
+			person2.addEmail("test2@dataone.org");
 			
 			Principal groupName = new Principal();
 			groupName.setValue(groupPrincipal);
@@ -145,6 +149,8 @@ public class CNIdentityLDAPImplTest {
 			check = identityService.createGroup(groupName);
 			assertTrue(check);
 			check = identityService.addGroupMembers(groupName, members);
+			assertTrue(check);
+			check = identityService.removeGroupMembers(groupName, members);
 			assertTrue(check);
 			
 			// clean up (this is not required for service to be functioning)
@@ -171,14 +177,16 @@ public class CNIdentityLDAPImplTest {
 			Person person1 = new Person();
 			person1.setPrincipal(p1);
 			person1.setFamilyName("test1");
-			person1.setGivenNameList(Arrays.asList(new String[] {"test1"}));
+			person1.addGivenName("test1");
+			person1.addEmail("test1@dataone.org");
 			
 			Principal p2 = new Principal();
 			p2.setValue(secondaryPrincipal);
 			Person person2 = new Person();
 			person2.setPrincipal(p2);
 			person2.setFamilyName("test2");
-			person2.setGivenNameList(Arrays.asList(new String[] {"test1"}));
+			person2.addGivenName("test2");
+			person2.addEmail("test2@dataone.org");
 			
 			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();		
 			boolean check = false;
@@ -235,7 +243,8 @@ public class CNIdentityLDAPImplTest {
 			Person person = new Person();
 			person.setPrincipal(principal);
 			person.setFamilyName("test1");
-			person.setGivenNameList(Arrays.asList(new String[] {"test1"}));
+			person.addGivenName("test1");
+			person.addEmail("test1@dataone.org");
 			
 			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
 			Principal p = identityService.registerAccount(person);
@@ -252,8 +261,45 @@ public class CNIdentityLDAPImplTest {
 			assertTrue(check);
 	
 		} catch (Exception e) {
-			fail();
 			e.printStackTrace();
+			fail();
+		}
+	
+	}
+	
+	@Test
+	public void principalInfo()  {
+	
+		try {
+			
+			// test that this email address is saved and retrieved
+			String email = "test1@dataone.org";
+			
+			Principal principal = new Principal();
+			principal.setValue(primaryPrincipal);
+			Person person = new Person();
+			person.setPrincipal(principal);
+			person.setFamilyName("test1");
+			person.addGivenName("test1");
+			person.addEmail(email);
+			
+			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
+			Principal p = identityService.registerAccount(person);
+			assertNotNull(p);
+			
+			boolean check = false;
+			PrincipalList principalList = identityService.getPrincipalInfo(p);
+			assertNotNull(principalList);
+			check = principalList.getPerson(0).getEmail(0).equals(email);
+			assertTrue(check);
+			
+			//clean up
+			check = identityService.removePrincipal(p);
+			assertTrue(check);
+	
+		} catch (Exception e) {
+			e.printStackTrace();
+			fail();
 		}
 	
 	}
