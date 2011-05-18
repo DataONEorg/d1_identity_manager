@@ -70,7 +70,10 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 			InvalidToken, NotAuthorized, NotFound, NotImplemented,
 			InvalidRequest, IdentifierNotUnique {
 		
-		// Values for the entry
+		/* objectClass groupOfUniqueNames....
+		 * MUST ( uniqueMember $ cn )
+		 * MAY ( businessCategory $ seeAlso $ owner $ ou $ o $ description ) )
+		 */
 	    Attribute objClasses = new BasicAttribute("objectclass");
 	    objClasses.add("top");
 	    objClasses.add("groupOfUniqueNames");
@@ -258,11 +261,14 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	    objClasses.add("inetOrgPerson");
 	    objClasses.add("d1Principal");
 	    Attribute cn = new BasicAttribute("cn", p.getFamilyName());
-	    // TODO handle actual name if we have it
 	    Attribute sn = new BasicAttribute("sn", p.getFamilyName());
-	    Attribute givenNames = new BasicAttribute("givenname");
+	    Attribute givenNames = new BasicAttribute("givenName");
 	    for (String givenName: p.getGivenNameList()) {
 	    	givenNames.add(givenName);
+	    }
+	    Attribute mail = new BasicAttribute("mail");
+	    for (String email: p.getEmailList()) {
+	    	mail.add(email);
 	    }
 	    Attribute isVerified = new BasicAttribute("isVerified", Boolean.FALSE.toString().toUpperCase());
 
@@ -277,7 +283,8 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	        orig.put(objClasses);
 	        orig.put(cn);
 	        orig.put(sn);
-	        //orig.put(givenNames);
+	        orig.put(givenNames);
+	        orig.put(mail);
 	        orig.put(isVerified);
 	        // Add the entry
 	        ctx.createSubcontext(dn, orig);
@@ -296,8 +303,110 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	// TODO: implement
 	public PrincipalList getPrincipalInfo(Principal principal)
     	throws ServiceFailure, InvalidToken, NotAuthorized, NotImplemented {
-		throw new NotImplemented(null, "getPrincipalInfo not implemented yet");
 
+		PrincipalList pList = new PrincipalList();
+	    String dn = principal.getValue();
+		try {
+			DirContext ctx = getContext();
+			Attributes attributes = ctx.getAttributes(dn);
+			if (attributes != null) {
+				NamingEnumeration<String> objectClasses = (NamingEnumeration<String>) attributes.get("objectClass").getAll();
+				boolean isGroup = true;
+				while (objectClasses.hasMore()) {
+					String objectClass = objectClasses.next();
+					if (objectClass.equalsIgnoreCase("d1Principal")) {
+						isGroup = false;
+						break;
+					}
+				}
+				// process as Group
+				if (isGroup) {
+					Group group = new Group();
+					group.setPrincipal(principal);
+					group.setGroupName((String) attributes.get("cn").get());
+					List<Principal> members = new ArrayList<Principal>();
+					NamingEnumeration<String> uniqueMembers = (NamingEnumeration<String>) attributes.get("uniqueMember").getAll();
+					while (uniqueMembers.hasMore()) {
+						String uniqueMember = uniqueMembers.next();
+						Principal member = new Principal();
+						member.setValue(uniqueMember);
+						members.add(member);
+					}
+					group.setHasMemberList(members);
+					pList.addGroup(group);
+				} else {
+					Person person = new Person();
+					person.setPrincipal(principal);
+
+					// get all attributes and process what we have
+					NamingEnumeration<? extends Attribute> values = attributes.getAll();
+					// for handling multi-item attributes
+					NamingEnumeration<String> items = null;
+					while (values.hasMore()) {
+						Attribute attribute = values.next();
+						String attributeName = attribute.getID();
+						String attributeValue = null;
+						
+						if (attributeName.equalsIgnoreCase("cn")) {
+							attributeValue = (String) attribute.get();
+							//person.setFamilyName(attributeValue);
+							log.debug("Found attribute: " + attributeName + "=" + attributeValue);
+						}
+						if (attributeName.equalsIgnoreCase("sn")) {
+							attributeValue = (String) attribute.get();
+							person.setFamilyName(attributeValue);
+							log.debug("Found attribute: " + attributeName + "=" + attributeValue);
+						}
+						if (attributeName.equalsIgnoreCase("mail")) {
+							items = (NamingEnumeration<String>) attribute.getAll();
+							while (items.hasMore()) {
+								attributeValue = items.next();
+								person.addEmail(attributeValue);
+								log.debug("Found attribute: " + attributeName + "=" + attributeValue);
+							}
+						}
+						if (attributeName.equalsIgnoreCase("givenName")) {
+							items = (NamingEnumeration<String>) attribute.getAll();
+							while (items.hasMore()) {
+								attributeValue = items.next();
+								person.addGivenName(attributeValue);
+								log.debug("Found attribute: " + attributeName + "=" + attributeValue);
+							}
+						}
+						if (attributeName.equalsIgnoreCase("equivalentIdentity")) {
+							items = (NamingEnumeration<String>) attribute.getAll();
+							while (items.hasMore()) {
+								attributeValue = items.next();
+								Principal equivalentIdentity = new Principal();
+								equivalentIdentity.setValue(attributeValue);
+								person.addEquivalentIdentity(equivalentIdentity);
+								log.debug("Found attribute: " + attributeName + "=" + attributeValue);
+							}
+						}
+						// TODO: store in person, or only in group entry?
+						if (attributeName.equalsIgnoreCase("memberOf")) {
+							items = (NamingEnumeration<String>) attribute.getAll();
+							while (items.hasMore()) {
+								attributeValue = items.next();
+								Principal group = new Principal();
+								group.setValue(attributeValue);
+								person.addIsMemberOf(group);
+								log.debug("Found attribute: " + attributeName + "=" + attributeValue);
+							}
+						}
+					}
+					// TODO: handle group membership here?
+					
+					pList.addPerson(person);
+				}			
+			}
+		} catch (Exception e) {
+	    	log.error("Problem looking up entry: " + dn, e);
+		}
+		
+		log.debug("Retrieved PrincipalList for: " + dn);
+		
+		return pList;
 	}
 	
 	// TODO: implement
@@ -357,11 +466,12 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 		try {
 			DirContext ctx = getContext();
 			ctx.destroySubcontext(p.getValue());
-
+	    	log.debug("Removed entry: " + p.getValue());
 	    } catch (NamingException e) {
 	    	log.error("Error removing entry: " + p.getValue(), e);
 	        return false;
 	    }
+	    
 	    return true;
 	}
 	
@@ -377,7 +487,14 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 		    
 	        NamingEnumeration results = 
 	            ctx.search(principal.getValue(), searchCriteria, ctls);
-	        return (results != null && results.hasMoreElements());
+	        
+	        boolean result = (results != null && results.hasMoreElements());
+	        if (result) {
+	        	log.debug("Found matching attribute: " + searchCriteria);
+	        } else {
+	        	log.warn("Did not find matching attribute: " + searchCriteria);
+	        }
+	        return result;
 	    } catch (NamingException e) {
 	    	log.error("Problem checking attribute: " + attributeName, e);
 	    }
