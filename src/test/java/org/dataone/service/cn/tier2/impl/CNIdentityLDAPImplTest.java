@@ -52,7 +52,7 @@ public class CNIdentityLDAPImplTest {
 			boolean check = false;
 			
 			// wait for replication to occur
-			Thread.sleep(5000);
+			//Thread.sleep(5000);
 			
 			// check it on the other server
 			identityService.setServer(serverReplica);
@@ -92,7 +92,7 @@ public class CNIdentityLDAPImplTest {
 			boolean check = false;
 			
 			// wait for replication to occur
-			Thread.sleep(5000);
+			//Thread.sleep(5000);
 			
 			// check it on the other server
 			identityService.setServer(server);
