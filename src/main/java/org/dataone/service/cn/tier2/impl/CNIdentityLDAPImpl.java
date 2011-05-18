@@ -1,6 +1,7 @@
 package org.dataone.service.cn.tier2.impl;
 
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.List;
 
@@ -16,6 +17,7 @@ import javax.naming.directory.DirContext;
 import javax.naming.directory.InitialDirContext;
 import javax.naming.directory.ModificationItem;
 import javax.naming.directory.SearchControls;
+import javax.naming.directory.SearchResult;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -58,6 +60,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	private String server = "ldap://fred.msi.ucsb.edu:389";
 	private String admin = "cn=admin,dc=dataone,dc=org";
 	private String password = "password";
+	private String base = "dc=dataone,dc=org";
 
 	public boolean createGroup(Session session, Subject groupName) throws ServiceFailure,
 			InvalidToken, NotAuthorized, NotFound, NotImplemented,
@@ -72,10 +75,12 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	    objClasses.add("groupOfUniqueNames");
 	    objClasses.add("d1Group");
 	    Attribute cn = new BasicAttribute("cn", parseAttribute(groupName.getValue(), "cn"));
-	    // 'uniqueMember' is required - so no empty groups!
-	    Attribute uniqueMember = new BasicAttribute("uniqueMember", "");
-	    // TODO: need the Subject who created the group (will be in cert)
-	    Attribute adminIdentity = new BasicAttribute("adminIdentity", "");
+	    // use the Subject who creates the group
+	    Subject groupAdmin = session.getSubject();
+	    Attribute adminIdentity = new BasicAttribute("adminIdentity", groupAdmin.getValue());
+	    // 'uniqueMember' is required
+	    Attribute uniqueMember = new BasicAttribute("uniqueMember", groupAdmin.getValue());
+
 	    // the DN for the group
 	    String dn = groupName.getValue();
 	   
@@ -304,7 +309,6 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 		return subject;
 	}
 	
-	// TODO: implement
 	public SubjectList getSubjectInfo(Session session, Subject subject)
     	throws ServiceFailure, InvalidToken, NotAuthorized, NotImplemented {
 
@@ -313,6 +317,61 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 		try {
 			DirContext ctx = getContext();
 			Attributes attributes = ctx.getAttributes(dn);
+			pList = processAttributes(dn, attributes);
+			log.debug("Retrieved SubjectList for: " + dn);
+		} catch (Exception e) {
+	    	log.error("Problem looking up entry: " + dn, e);
+		}
+		
+		return pList;
+	}
+	
+	// TODO: implement
+	public SubjectList listSubjects(Session session, String query, int start, int count)
+	    throws ServiceFailure, InvalidToken, NotAuthorized, NotImplemented {
+
+		SubjectList pList = new SubjectList();
+		try {
+			DirContext ctx = getContext();
+			SearchControls ctls = new SearchControls();
+		    ctls.setSearchScope(SearchControls.SUBTREE_SCOPE);
+		    
+		    // search for principals and groups
+		    String searchCriteria = "(|(objectClass=d1Principal)(objectClass=d1Group))";
+		    
+	        NamingEnumeration<SearchResult> results = 
+	            ctx.search(base, searchCriteria, ctls);
+	        
+	        while (results != null && results.hasMore()) {
+	            SearchResult si = results.next();
+	            String dn = si.getNameInNamespace();
+	            log.debug("Search result found for: " + dn);
+	            Attributes attrs = si.getAttributes();
+                SubjectList resultList = processAttributes(dn, attrs);
+                if (resultList != null) {
+                	// add groups
+	                for (Group group: resultList.getGroupList()) {
+		                pList.addGroup(group);
+	                }
+	                // add people
+	                for (Person person: resultList.getPersonList()) {
+		                pList.addPerson(person);
+	                }
+                }
+	        }
+	        
+	    } catch (NamingException e) {
+	    	log.error("Problem listing entries at base: " + base, e);
+	    }
+	    
+	    return pList;
+	}
+	
+	private SubjectList processAttributes(String name, Attributes attributes) {
+		
+		SubjectList pList = new SubjectList();
+
+		try {
 			if (attributes != null) {
 				NamingEnumeration<String> objectClasses = (NamingEnumeration<String>) attributes.get("objectClass").getAll();
 				boolean isGroup = true;
@@ -323,37 +382,56 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 						break;
 					}
 				}
+				
+				// get all attributes for processing
+				NamingEnumeration<? extends Attribute> values = attributes.getAll();
+				// for handling multi-item attributes
+				NamingEnumeration<String> items = null;
+				
 				// process as Group
 				if (isGroup) {
 					Group group = new Group();
+					Subject subject = new Subject();
+					subject.setValue(name);
 					group.setSubject(subject);
-					group.setGroupName((String) attributes.get("cn").get());
-					List<Subject> members = new ArrayList<Subject>();
-					NamingEnumeration<String> uniqueMembers = (NamingEnumeration<String>) attributes.get("uniqueMember").getAll();
-					while (uniqueMembers.hasMore()) {
-						String uniqueMember = uniqueMembers.next();
-						Subject member = new Subject();
-						member.setValue(uniqueMember);
-						members.add(member);
-					}
-					group.setHasMemberList(members);
-					pList.addGroup(group);
-				} else {
-					Person person = new Person();
-					person.setSubject(subject);
-
-					// get all attributes and process what we have
-					NamingEnumeration<? extends Attribute> values = attributes.getAll();
-					// for handling multi-item attributes
-					NamingEnumeration<String> items = null;
+					
 					while (values.hasMore()) {
 						Attribute attribute = values.next();
 						String attributeName = attribute.getID();
 						String attributeValue = null;
-						
+
 						if (attributeName.equalsIgnoreCase("cn")) {
 							attributeValue = (String) attribute.get();
-							//person.setFamilyName(attributeValue);
+							group.setGroupName(attributeValue);
+							log.debug("Found attribute: " + attributeName + "=" + attributeValue);
+						}
+						if (attributeName.equalsIgnoreCase("uniqueMember")) {
+							items = (NamingEnumeration<String>) attribute.getAll();
+							while (items.hasMore()) {
+								attributeValue = items.next();
+								Subject member = new Subject();
+								member.setValue(attributeValue);
+								group.addHasMember(member);
+								log.debug("Found attribute: " + attributeName + "=" + attributeValue);
+							}
+						}
+					}
+					pList.addGroup(group);
+					
+				} else {
+					// process as a person
+					Person person = new Person();
+					Subject subject = new Subject();
+					subject.setValue(name);
+					person.setSubject(subject);
+					
+					while (values.hasMore()) {
+						Attribute attribute = values.next();
+						String attributeName = attribute.getID();
+						String attributeValue = null;
+
+						if (attributeName.equalsIgnoreCase("cn")) {
+							attributeValue = (String) attribute.get();
 							log.debug("Found attribute: " + attributeName + "=" + attributeValue);
 						}
 						if (attributeName.equalsIgnoreCase("sn")) {
@@ -405,18 +483,9 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 				}			
 			}
 		} catch (Exception e) {
-	    	log.error("Problem looking up entry: " + dn, e);
+	    	log.error("Problem processing attributes", e);
 		}
-		
-		log.debug("Retrieved SubjectList for: " + dn);
-		
 		return pList;
-	}
-	
-	// TODO: implement
-	public SubjectList listSubjects(Session session, String query, int start, int count)
-	    throws ServiceFailure, InvalidToken, NotAuthorized, NotImplemented {
-		throw new NotImplemented(null, "listSubjects not implemented yet");
 	}
 	
 	private DirContext getContext() throws NamingException {
@@ -517,7 +586,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 		try {
 			
 			Subject p = new Subject();
-			p.setValue("cn=test1,dc=dataone,dc=org");
+			p.setValue("cn=testGroup,dc=dataone,dc=org");
 		
 			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
 			identityService.removeSubject(p);

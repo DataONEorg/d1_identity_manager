@@ -14,7 +14,7 @@ import org.junit.Test;
 
 /**
  *
- * @author waltz
+ * @author leinfelder
  */
 public class CNIdentityLDAPImplTest {
 	
@@ -23,7 +23,7 @@ public class CNIdentityLDAPImplTest {
 
 	private String primarySubject = "cn=test1,dc=dataone,dc=org";
 	private String secondarySubject = "cn=test2,dc=dataone,dc=org";
-	private String groupSubject = "cn=testGroup,dc=dataone,dc=org";
+	private String groupName = "cn=testGroup,dc=dataone,dc=org";
 
 	private static Session getSession(Subject subject) {
 		Session session = new Session();
@@ -131,11 +131,12 @@ public class CNIdentityLDAPImplTest {
 			person2.addGivenName("test2");
 			person2.addEmail("test2@dataone.org");
 			
-			Subject groupName = new Subject();
-			groupName.setValue(groupSubject);
+			Subject groupSubject = new Subject();
+			groupSubject.setValue(groupName);
 			
+			// only add the secondary person because p1 is owner (member by default)
 			SubjectList members = new SubjectList();
-			members.addPerson(person1);
+			//members.addPerson(person1);
 			members.addPerson(person2);
 			
 			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();		
@@ -148,11 +149,11 @@ public class CNIdentityLDAPImplTest {
 			assertNotNull(subject);
 			
 			// group
-			check = identityService.createGroup(getSession(p1), groupName);
+			check = identityService.createGroup(getSession(p1), groupSubject);
 			assertTrue(check);
-			check = identityService.addGroupMembers(getSession(p1), groupName, members);
+			check = identityService.addGroupMembers(getSession(p1), groupSubject, members);
 			assertTrue(check);
-			check = identityService.removeGroupMembers(getSession(p1), groupName, members);
+			check = identityService.removeGroupMembers(getSession(p1), groupSubject, members);
 			assertTrue(check);
 			
 			// clean up (this is not required for service to be functioning)
@@ -160,7 +161,7 @@ public class CNIdentityLDAPImplTest {
 			assertTrue(check);
 			check = identityService.removeSubject(p2);
 			assertTrue(check);
-			check = identityService.removeSubject(groupName);
+			check = identityService.removeSubject(groupSubject);
 			assertTrue(check);
 			
 		} catch (Exception e) {
@@ -305,6 +306,56 @@ public class CNIdentityLDAPImplTest {
 		}
 	
 	}
+	
+	@Test
+	public void listSubjects()  {
+	
+		try {
+			
+			// test that this email address is saved and retrieved
+			String email = "test1@dataone.org";
+			
+			Subject subject = new Subject();
+			subject.setValue(primarySubject);
+			Person person = new Person();
+			person.setSubject(subject);
+			person.setFamilyName("test1");
+			person.addGivenName("test1");
+			person.addEmail(email);
+			
+			Subject groupSubject = new Subject();
+			groupSubject.setValue(groupName);
+			
+			SubjectList members = new SubjectList();
+			members.addPerson(person);
+			
+			boolean check = false;
 
+			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
+			Subject p = identityService.registerAccount(getSession(subject), person);
+			assertNotNull(p);
+			check = identityService.createGroup(getSession(subject), groupSubject);
+			assertTrue(check);
+//			check = identityService.addGroupMembers(getSession(subject), groupSubject, members);
+//			assertTrue(check);
+			
+			// check the subjects exist
+			SubjectList subjectList = identityService.listSubjects(getSession(subject), null, -1, -1);
+			assertNotNull(subjectList);
+			check = subjectList.getPerson(0).getEmail(0).equalsIgnoreCase(email);
+			assertTrue(check);
+			check = subjectList.getGroup(0).getSubject().getValue().equalsIgnoreCase(groupName);
+			assertTrue(check);
+			
+			//clean up
+			check = identityService.removeSubject(p);
+			assertTrue(check);
+	
+		} catch (Exception e) {
+			e.printStackTrace();
+			fail();
+		}
+	
+	}
 	
 }
