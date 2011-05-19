@@ -94,9 +94,9 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	        ctx.createSubcontext(dn, orig);
 	        log.debug( "Created group " + dn + ".");
 	    } catch (NameAlreadyBoundException e) {
-	        /* If entry exists already, fine.  Ignore this error. */
+	        // If entry exists already, fine.  Ignore this error.
 	    	log.warn("Group " + dn + " already exists, no need to create");
-	        //return true;
+	        //return false;
 	    } catch (NamingException e) {
 	    	log.error("Problem creating group." + e);
 	        return false;
@@ -109,12 +109,18 @@ public class CNIdentityLDAPImpl implements CNIdentity {
     	throws ServiceFailure, InvalidToken, NotAuthorized, NotFound, NotImplemented, InvalidRequest {
     	
     	try {
+	        
+	        // check that they have admin rights for group
+	        Subject user = session.getSubject();
+	        boolean canEdit = this.checkAttribute(groupName, "adminIdentity", user.getValue());
+	        if (!canEdit) {
+	        	throw new NotAuthorized(null, "Subject not in adminIdentity list: " + user.getValue());
+	        }
+	        
 	        // context
 	        DirContext ctx = getContext();
 	        
-	        // TODO: check that they have admin rights for group
-	        
-	        //collect all the subjects from groups and people
+	        // collect all the subjects from groups and people
 	        List<Subject> subjects = new ArrayList<Subject>();
 	        for (Group group: members.getGroupList()) {
 	        	subjects.add(group.getSubject());
@@ -123,8 +129,12 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	        	subjects.add(person.getSubject());
 	        }
 	        for (Subject subject: subjects) {
-		        // TODO: check that they are not already a member
-	        	
+		        // check that they are not already a member
+	        	boolean isMember = this.checkAttribute(groupName, "uniqueMember", subject.getValue());
+	        	if (isMember) {
+			        log.warn("Already a member: " + subject.getValue() + " of group: " + groupName.getValue() );
+	        		continue;
+	        	}
 		        // add them as a member
 		        ModificationItem[] mods = new ModificationItem[1];
 		        Attribute mod0 = new BasicAttribute("uniqueMember", subject.getValue());
@@ -145,10 +155,16 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 		throws ServiceFailure, InvalidToken, NotAuthorized, NotFound, NotImplemented, InvalidRequest {
 		
 		try {
+	        
+	        // check that they have admin rights for group
+	        Subject user = session.getSubject();
+	        boolean canEdit = this.checkAttribute(groupName, "adminIdentity", user.getValue());
+	        if (!canEdit) {
+	        	throw new NotAuthorized(null, "Subject not in adminIdentity list: " + user.getValue());
+	        }
+	        
 	        // context
 	        DirContext ctx = getContext();
-	        
-	        // TODO: check that they have admin rights for group
 	        
 	        //collect all the subjects from groups and people
 	        List<Subject> subjects = new ArrayList<Subject>();
@@ -261,7 +277,12 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	    objClasses.add("organizationalPerson");
 	    objClasses.add("inetOrgPerson");
 	    objClasses.add("d1Principal");
-	    Attribute cn = new BasicAttribute("cn", p.getFamilyName());
+	    String commonName = "";
+	    if (p.getGivenNameList() != null && !p.getGivenNameList().isEmpty()) {
+	    	commonName += p.getGivenName(0) + " "; 
+	    }
+	    commonName += p.getFamilyName();;
+	    Attribute cn = new BasicAttribute("cn", commonName);
 	    Attribute sn = new BasicAttribute("sn", p.getFamilyName());
 	    Attribute givenNames = new BasicAttribute("givenName");
 	    for (String givenName: p.getGivenNameList()) {
@@ -299,7 +320,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	        ctx.createSubcontext(dn, orig);
 	        log.debug( "Added entry " + dn);
 	    } catch (NameAlreadyBoundException e) {
-	        /* If entry exists already, fine.  Ignore this error. */
+	        // If entry exists already, fine.  Ignore this error. 
 	    	log.warn("Entry " + dn + " already exists, no need to add", e);
 	        //return false;
 	    } catch (NamingException e) {
@@ -326,7 +347,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 		return pList;
 	}
 	
-	// TODO: implement
+	// TODO: use query and start/count params
 	public SubjectList listSubjects(Session session, String query, int start, int count)
 	    throws ServiceFailure, InvalidToken, NotAuthorized, NotImplemented {
 
