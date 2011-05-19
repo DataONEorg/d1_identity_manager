@@ -73,11 +73,11 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	    Attribute objClasses = new BasicAttribute("objectclass");
 	    objClasses.add("top");
 	    objClasses.add("groupOfUniqueNames");
-	    objClasses.add("d1Group");
+	    //objClasses.add("d1Group");
 	    Attribute cn = new BasicAttribute("cn", parseAttribute(groupName.getValue(), "cn"));
 	    // use the Subject who creates the group
 	    Subject groupAdmin = session.getSubject();
-	    Attribute adminIdentity = new BasicAttribute("adminIdentity", groupAdmin.getValue());
+	    Attribute owner = new BasicAttribute("owner", groupAdmin.getValue());
 	    // 'uniqueMember' is required
 	    Attribute uniqueMember = new BasicAttribute("uniqueMember", groupAdmin.getValue());
 
@@ -90,7 +90,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	        orig.put(objClasses);
 	        orig.put(cn);
 	        orig.put(uniqueMember);
-	        orig.put(adminIdentity);
+	        orig.put(owner);
 	        ctx.createSubcontext(dn, orig);
 	        log.debug( "Created group " + dn + ".");
 	    } catch (NameAlreadyBoundException e) {
@@ -112,9 +112,9 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	        
 	        // check that they have admin rights for group
 	        Subject user = session.getSubject();
-	        boolean canEdit = this.checkAttribute(groupName, "adminIdentity", user.getValue());
+	        boolean canEdit = this.checkAttribute(groupName, "owner", user.getValue());
 	        if (!canEdit) {
-	        	throw new NotAuthorized(null, "Subject not in adminIdentity list: " + user.getValue());
+	        	throw new NotAuthorized(null, "Subject not in owner list: " + user.getValue());
 	        }
 	        
 	        // context
@@ -158,9 +158,9 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	        
 	        // check that they have admin rights for group
 	        Subject user = session.getSubject();
-	        boolean canEdit = this.checkAttribute(groupName, "adminIdentity", user.getValue());
+	        boolean canEdit = this.checkAttribute(groupName, "owner", user.getValue());
 	        if (!canEdit) {
-	        	throw new NotAuthorized(null, "Subject not in adminIdentity list: " + user.getValue());
+	        	throw new NotAuthorized(null, "Subject not in owner list: " + user.getValue());
 	        }
 	        
 	        // context
@@ -358,7 +358,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 		    ctls.setSearchScope(SearchControls.SUBTREE_SCOPE);
 		    
 		    // search for principals and groups
-		    String searchCriteria = "(|(objectClass=d1Principal)(objectClass=d1Group))";
+		    String searchCriteria = "(|(objectClass=d1Principal)(objectClass=groupOfUniqueNames))";
 		    
 	        NamingEnumeration<SearchResult> results = 
 	            ctx.search(base, searchCriteria, ctls);
