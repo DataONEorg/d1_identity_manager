@@ -238,8 +238,8 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 		    
 	        }
 	        
-		} catch (NamingException e) {
-			e.printStackTrace();
+		} catch (Exception e) {
+			log.error("Could not map identity", e);
 	        return false;
 	    }		
 		
