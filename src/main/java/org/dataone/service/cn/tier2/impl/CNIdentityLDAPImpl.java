@@ -23,6 +23,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.dataone.service.cn.tier2.CNIdentity;
 import org.dataone.service.exceptions.IdentifierNotUnique;
+import org.dataone.service.exceptions.InvalidCredentials;
 import org.dataone.service.exceptions.InvalidRequest;
 import org.dataone.service.exceptions.InvalidToken;
 import org.dataone.service.exceptions.NotAuthorized;
@@ -244,6 +245,51 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	    }		
 		
 		return true;
+	}
+	
+	public Subject updateAccount(Session session, Person p) throws ServiceFailure, 
+		IdentifierNotUnique, InvalidCredentials, NotImplemented, InvalidRequest {
+		
+		Subject subject = p.getSubject();
+
+		try {
+			String commonName = "";
+		    if (p.getGivenNameList() != null && !p.getGivenNameList().isEmpty()) {
+		    	commonName += p.getGivenName(0) + " "; 
+		    }
+		    commonName += p.getFamilyName();;
+		    Attribute cn = new BasicAttribute("cn", commonName);
+		    Attribute sn = new BasicAttribute("sn", p.getFamilyName());
+		    Attribute givenNames = new BasicAttribute("givenName");
+		    for (String givenName: p.getGivenNameList()) {
+		    	givenNames.add(givenName);
+		    }
+		    Attribute mail = new BasicAttribute("mail");
+		    for (String email: p.getEmailList()) {
+		    	mail.add(email);
+		    }
+		    // Update isVerified attribute to false again
+		    Attribute isVerified = new BasicAttribute("isVerified", Boolean.FALSE.toString().toUpperCase());
+			
+		    // get a handle to an Initial DirContext
+		    DirContext ctx = getContext();
+		    
+		    // construct the list of modifications to make 
+		    ModificationItem[] mods = new ModificationItem[5];
+		    mods[0] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, cn);
+		    mods[1] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, sn);
+		    mods[2] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, givenNames);
+		    mods[3] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, mail);
+		    mods[4] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, isVerified);
+		    
+		    // make the change 
+		    ctx.modifyAttributes(subject.getValue(), mods);
+		    log.debug( "Updated entry: " + subject.getValue() );
+		} catch (Exception e) {
+		    throw new ServiceFailure(null, e.getMessage());
+		}		
+		
+		return subject;
 	}
 
 	public boolean verifyAccount(Session session, Subject subject) throws ServiceFailure,
