@@ -272,6 +272,47 @@ public class CNIdentityLDAPImplTest {
 	}
 	
 	@Test
+	public void updateAccount()  {
+	
+		try {
+			String newEmailAddress = "test2@dataone.org";
+			Subject subject = new Subject();
+			subject.setValue(primarySubject);
+			Person person = new Person();
+			person.setSubject(subject);
+			person.setFamilyName("test1");
+			person.addGivenName("test1");
+			person.addEmail("test1@dataone.org");
+			
+			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
+			Subject p = identityService.registerAccount(getSession(subject), person);
+			assertNotNull(p);
+			
+			boolean check = false;
+			// check that new email is NOT there
+			check = identityService.checkAttribute(p, "mail", newEmailAddress);
+			assertFalse(check);
+			
+			// change their email address, check that it is there
+			person.clearEmailList();
+			person.addEmail(newEmailAddress);
+			p = identityService.updateAccount(getSession(subject), person);
+			assertNotNull(p);
+			check = identityService.checkAttribute(p, "mail", newEmailAddress);
+			assertTrue(check);
+			
+			//clean up
+			check = identityService.removeSubject(p);
+			assertTrue(check);
+	
+		} catch (Exception e) {
+			e.printStackTrace();
+			fail();
+		}
+	
+	}
+	
+	@Test
 	public void subjectInfo()  {
 	
 		try {
@@ -351,6 +392,8 @@ public class CNIdentityLDAPImplTest {
 			//clean up
 			check = identityService.removeSubject(p);
 			assertTrue(check);
+//			check = identityService.removeSubject(groupSubject);
+//			assertTrue(check);
 	
 		} catch (Exception e) {
 			e.printStackTrace();
