@@ -143,7 +143,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 		        ctx.modifyAttributes(groupName.getValue(), mods);
 		        log.debug("Added member: " + subject.getValue() + " to group: " + groupName.getValue() );
 	        }
-	    } catch (NamingException e) {
+	    } catch (Exception e) {
 	        throw new ServiceFailure(null, e.getMessage());
 	    }
     	
@@ -183,7 +183,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 		        ctx.modifyAttributes(groupName.getValue(), mods);
 		        log.debug("Removed member: " + subject.getValue() + " from group: " + groupName.getValue() );
 	        }
-	    } catch (NamingException e) {
+	    } catch (Exception e) {
 	        throw new ServiceFailure(null, e.getMessage());
 	    }
 		
