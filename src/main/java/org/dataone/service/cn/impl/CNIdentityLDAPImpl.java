@@ -1,4 +1,4 @@
-package org.dataone.service.cn.tier2.impl;
+package org.dataone.service.cn.impl;
 
 import java.util.ArrayList;
 import java.util.Enumeration;

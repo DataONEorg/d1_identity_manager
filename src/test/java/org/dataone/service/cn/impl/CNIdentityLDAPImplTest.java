@@ -1,4 +1,4 @@
-package org.dataone.service.cn.tier2.impl;
+package org.dataone.service.cn.impl;
 
 
 import static org.junit.Assert.assertFalse;
@@ -6,6 +6,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import org.dataone.service.cn.impl.CNIdentityLDAPImpl;
 import org.dataone.service.types.Person;
 import org.dataone.service.types.Session;
 import org.dataone.service.types.Subject;
