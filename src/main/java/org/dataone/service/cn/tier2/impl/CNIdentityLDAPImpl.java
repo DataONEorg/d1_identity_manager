@@ -21,7 +21,7 @@ import javax.naming.directory.SearchResult;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.dataone.service.cn.tier2.CNIdentity;
+import org.dataone.service.cn.CNIdentity;
 import org.dataone.service.exceptions.IdentifierNotUnique;
 import org.dataone.service.exceptions.InvalidCredentials;
 import org.dataone.service.exceptions.InvalidRequest;
@@ -377,7 +377,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	}
 	
 	public SubjectList getSubjectInfo(Session session, Subject subject)
-    	throws ServiceFailure, InvalidToken, NotAuthorized, NotImplemented {
+		throws ServiceFailure, InvalidToken {
 
 		SubjectList pList = new SubjectList();
 	    String dn = subject.getValue();
