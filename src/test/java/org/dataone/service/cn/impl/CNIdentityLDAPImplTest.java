@@ -217,7 +217,7 @@ public class CNIdentityLDAPImplTest {
 			check = identityService.checkAttribute(p2, "equivalentIdentity", p1.getValue());
 			assertFalse(check);
 			// accept request
-			check = identityService.mapIdentity(getSession(p2), p1);
+			check = identityService.confirmMapIdentity(getSession(p2), p1);
 			assertTrue(check);
 			
 			// double check reciprocal mapping

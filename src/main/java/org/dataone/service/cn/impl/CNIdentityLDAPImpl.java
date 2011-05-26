@@ -210,6 +210,44 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	        ModificationItem[] mods = null;
 	        Attribute mod0 = null;
 	        if (confirmationRequest) {
+		        log.warn("Request already issued for: " + secondarySubject.getValue() + " = " + primarySubject.getValue());
+		        return false;
+	        } else {
+	        	// mark secondary as having the equivalentIdentityRequest
+		        mods = new ModificationItem[1];
+		        mod0 = new BasicAttribute("equivalentIdentityRequest", primarySubject.getValue());
+		        mods[0] = new ModificationItem(DirContext.ADD_ATTRIBUTE, mod0);
+		        // make the change
+		        ctx.modifyAttributes(secondarySubject.getValue(), mods);
+		        log.debug("Successfully set equivalentIdentityRequest on: " + secondarySubject.getValue() + " for " + primarySubject.getValue());
+	        }
+	        
+		} catch (Exception e) {
+			log.error("Could not map identity", e);
+	        return false;
+	    }		
+		
+		return true;
+	}
+	
+	public boolean confirmMapIdentity(Session session, Subject secondarySubject)
+			throws ServiceFailure, InvalidToken, NotAuthorized, NotFound,
+			NotImplemented, InvalidRequest {
+		
+		try {
+			// primary subject in the session
+			Subject primarySubject = session.getSubject();
+			
+		    // get the context
+		    DirContext ctx = getContext();
+		    
+		    // check if primary is confirming secondary
+		    boolean confirmationRequest = 
+		    	checkAttribute(primarySubject, "equivalentIdentityRequest", secondarySubject.getValue());
+		    
+		    ModificationItem[] mods = null;
+		    Attribute mod0 = null;
+		    if (confirmationRequest) {
 		        // update attribute on primarySubject
 		        mods = new ModificationItem[2];
 		        mod0 = new BasicAttribute("equivalentIdentity", secondarySubject.getValue());
@@ -228,21 +266,16 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 		        // make the change
 		        ctx.modifyAttributes(secondarySubject.getValue(), mods);
 		        log.debug("Successfully set reciprocal equivalentIdentity: " + secondarySubject.getValue() + " = " + primarySubject.getValue());
-	        } else {
-	        	// mark secondary as having the equivalentIdentityRequest
-		        mods = new ModificationItem[1];
-		        mod0 = new BasicAttribute("equivalentIdentityRequest", primarySubject.getValue());
-		        mods[0] = new ModificationItem(DirContext.ADD_ATTRIBUTE, mod0);
-		        // make the change
-		        ctx.modifyAttributes(secondarySubject.getValue(), mods);
-		        log.debug("Successfully set equivalentIdentityRequest on: " + secondarySubject.getValue() + " for " + primarySubject.getValue());
+		    } else {
+		    	// no request to confirm
+		        log.error("There is no identity mapping request to confim on: " + secondarySubject.getValue() + " for " + primarySubject.getValue());
+		        return false;
+		    }
 		    
-	        }
-	        
 		} catch (Exception e) {
 			log.error("Could not map identity", e);
-	        return false;
-	    }		
+		    return false;
+		}		
 		
 		return true;
 	}
