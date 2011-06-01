@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.dataone</groupId>
 	<artifactId>d1_identity_manager</artifactId>
-	<version>0.6.1-SNAPSHOT</version>
+	<version>0.6.1</version>
 	<name>DataONE Identity Manager</name>
 	<url>http://dataone.org</url>
 	<repositories>
@@ -17,6 +17,16 @@
 				<enabled>false</enabled>
 			</snapshots>
 		</repository>
+            <repository>
+                <id>dataone.org</id>
+                <url>http://dev-testing.dataone.org/maven</url>
+                <releases>
+                    <enabled>true</enabled>
+                </releases>
+                <snapshots>
+                    <enabled>true</enabled>
+                </snapshots>
+            </repository>
 	</repositories>
 	<dependencies>
 		<dependency>
@@ -29,7 +39,7 @@
 		<dependency>
 			<groupId>org.dataone</groupId>
 			<artifactId>d1_common_java</artifactId>
-			<version>0.6.1-SNAPSHOT</version>
+			<version>0.6.1</version>
 			<type>jar</type>
 		</dependency>
 	</dependencies>
