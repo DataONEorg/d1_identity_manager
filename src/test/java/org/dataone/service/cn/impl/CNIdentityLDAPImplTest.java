@@ -21,7 +21,7 @@ public class CNIdentityLDAPImplTest {
 	
 	private String server = "ldap://fred.msi.ucsb.edu:389";
 	private String serverReplica = "ldap://bespin.nceas.ucsb.edu:389";
-	private int replicationDelay = 1000; // milliseconds
+	private int replicationDelay = 5000; // milliseconds
 
 	private String primarySubject = "cn=test1,dc=dataone,dc=org";
 	private String secondarySubject = "cn=test2,dc=dataone,dc=org";
