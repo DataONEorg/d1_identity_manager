@@ -63,6 +63,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	private String password = "password";
 	private String base = "dc=dataone,dc=org";
 
+	@Override
 	public boolean createGroup(Session session, Subject groupName) throws ServiceFailure,
 			InvalidToken, NotAuthorized, NotFound, NotImplemented,
 			InvalidRequest, IdentifierNotUnique {
@@ -106,6 +107,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 		return true;
 	}
 	
+	@Override
     public boolean addGroupMembers(Session session, Subject groupName, SubjectList members) 
     	throws ServiceFailure, InvalidToken, NotAuthorized, NotFound, NotImplemented, InvalidRequest {
     	
@@ -152,6 +154,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
     	
     }
     
+	@Override
     public boolean removeGroupMembers(Session session, Subject groupName, SubjectList members) 
 		throws ServiceFailure, InvalidToken, NotAuthorized, NotFound, NotImplemented, InvalidRequest {
 		
@@ -192,6 +195,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 		
 	}
 
+    @Override
 	public boolean mapIdentity(Session session, Subject secondarySubject)
 			throws ServiceFailure, InvalidToken, NotAuthorized, NotFound,
 			NotImplemented, InvalidRequest {
@@ -230,6 +234,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 		return true;
 	}
 	
+	@Override
 	public boolean confirmMapIdentity(Session session, Subject secondarySubject)
 			throws ServiceFailure, InvalidToken, NotAuthorized, NotFound,
 			NotImplemented, InvalidRequest {
@@ -280,6 +285,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 		return true;
 	}
 	
+	@Override
 	public Subject updateAccount(Session session, Person p) throws ServiceFailure, 
 		IdentifierNotUnique, InvalidCredentials, NotImplemented, InvalidRequest {
 		
@@ -325,6 +331,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 		return subject;
 	}
 
+	@Override
 	public boolean verifyAccount(Session session, Subject subject) throws ServiceFailure,
 			NotAuthorized, NotImplemented, InvalidToken, InvalidRequest {
 		
@@ -348,6 +355,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 		return true;
 	}
 
+	@Override
 	public Subject registerAccount(Session session, Person p) {
 	    // Values we'll use in creating the entry
 	    Attribute objClasses = new BasicAttribute("objectclass");
@@ -409,8 +417,9 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 		return subject;
 	}
 	
+	@Override
 	public SubjectList getSubjectInfo(Session session, Subject subject)
-		throws ServiceFailure, InvalidToken {
+    	throws ServiceFailure, InvalidRequest, NotAuthorized, NotImplemented {
 
 		SubjectList pList = new SubjectList();
 	    String dn = subject.getValue();
@@ -427,8 +436,10 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	}
 	
 	// TODO: use query and start/count params
-	public SubjectList listSubjects(Session session, String query, int start, int count)
-	    throws ServiceFailure, InvalidToken, NotAuthorized, NotImplemented {
+	@Override
+	public SubjectList listSubjects(Session session, String query, Integer start, 
+	        Integer count) throws ServiceFailure, InvalidToken, NotAuthorized, 
+	        NotImplemented {
 
 		SubjectList pList = new SubjectList();
 		try {
