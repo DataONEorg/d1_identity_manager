@@ -21,7 +21,8 @@ public class CNIdentityLDAPImplTest {
 	
 	private String server = "ldap://fred.msi.ucsb.edu:389";
 	private String serverReplica = "ldap://bespin.nceas.ucsb.edu:389";
-	private int replicationDelay = 5000; // milliseconds
+	private int replicationDelay = 1000; // milliseconds
+	private int replicationAttempts = 10;
 
 	private String primarySubject = "cn=test1,dc=dataone,dc=org";
 	private String secondarySubject = "cn=test2,dc=dataone,dc=org";
@@ -52,13 +53,18 @@ public class CNIdentityLDAPImplTest {
 			assertNotNull(p);
 			
 			boolean check = false;
-			
-			// wait for replication to occur
-			Thread.sleep(replicationDelay);
-			
+			int count = 0;
 			// check it on the other server
 			identityService.setServer(serverReplica);
-			check = identityService.checkAttribute(p, "isVerified", "FALSE");
+			while (!check) {
+				// wait for replication to occur
+				Thread.sleep(replicationDelay);
+				check = identityService.checkAttribute(p, "isVerified", "FALSE");
+				count++;
+				if (count >= replicationAttempts) {
+					break;
+				}
+			}
 			assertTrue(check);
 			
 			//clean up
@@ -92,13 +98,18 @@ public class CNIdentityLDAPImplTest {
 			assertNotNull(p);
 			
 			boolean check = false;
-			
-			// wait for replication to occur
-			Thread.sleep(replicationDelay);
-			
-			// check it on the other server
+			int count = 0;
+			// check it on the server
 			identityService.setServer(server);
-			check = identityService.checkAttribute(p, "isVerified", "FALSE");
+			while (!check) {
+				// wait for replication to occur
+				Thread.sleep(replicationDelay);
+				check = identityService.checkAttribute(p, "isVerified", "FALSE");
+				count++;
+				if (count >= replicationAttempts) {
+					break;
+				}
+			}
 			assertTrue(check);
 			
 			//clean up
