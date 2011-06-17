@@ -16,5 +16,7 @@ Configuring OpenLDAP
 	slapd -h 'ldap:/// ldapi:///' -f /etc/ldap/slapd.conf
 	-Note: /etc/init.d/slapd start will attempt to use the newer database-based configuration method so you should not use that until we finalize configuration and convert the .conf to the db method
 -Populate the root of the dataone.org tree by adding the ldif:
-	ldapadd -D cn=admin,dc=dataone,dc=org -W -H ldap://<YOUR_HOST_NAME>:389 -x -f dataone.ldif	
+	ldapadd -D cn=admin,dc=dataone,dc=org -W -H ldap://<YOUR_HOST_NAME>:389 -x -f dataone.ldif
+-Check the entries for the dataone.org tree:
+	ldapsearch -LLL -D cn=admin,dc=dataone,dc=org -W -H ldap://<YOUR_HOST_NAME:389 -x -b 'dc=dataone,dc=org'		
 	
