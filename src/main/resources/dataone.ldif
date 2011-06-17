@@ -1,0 +1,5 @@
+dn: dc=dataone,dc=org
+objectclass: dcObject
+objectclass: organization
+o: DataONE
+dc: dataone
