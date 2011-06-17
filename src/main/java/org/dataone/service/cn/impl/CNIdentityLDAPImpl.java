@@ -292,11 +292,17 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 		Subject subject = p.getSubject();
 
 		try {
-			String commonName = "";
-		    if (p.getGivenNameList() != null && !p.getGivenNameList().isEmpty()) {
-		    	commonName += p.getGivenName(0) + " "; 
+			// the DN
+			String dn = subject.getValue();
+			
+			// either it's in the dn, or we should construct it
+		    String commonName = parseAttribute(dn, "cn");
+		    if (commonName == null) {
+			    if (p.getGivenNameList() != null && !p.getGivenNameList().isEmpty()) {
+			    	commonName += p.getGivenName(0) + " "; 
+			    }
+			    commonName += p.getFamilyName();
 		    }
-		    commonName += p.getFamilyName();;
 		    Attribute cn = new BasicAttribute("cn", commonName);
 		    Attribute sn = new BasicAttribute("sn", p.getFamilyName());
 		    Attribute givenNames = new BasicAttribute("givenName");
@@ -322,7 +328,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 		    mods[4] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, isVerified);
 		    
 		    // make the change 
-		    ctx.modifyAttributes(subject.getValue(), mods);
+		    ctx.modifyAttributes(dn, mods);
 		    log.debug( "Updated entry: " + subject.getValue() );
 		} catch (Exception e) {
 		    throw new ServiceFailure(null, e.getMessage());
@@ -364,11 +370,20 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	    objClasses.add("organizationalPerson");
 	    objClasses.add("inetOrgPerson");
 	    objClasses.add("d1Principal");
-	    String commonName = "";
-	    if (p.getGivenNameList() != null && !p.getGivenNameList().isEmpty()) {
-	    	commonName += p.getGivenName(0) + " "; 
+	    
+	    // TODO: do we create the subject, or is it a given?
+	    Subject subject = p.getSubject();
+	    String dn = subject.getValue();
+	    
+	    // either it's in the dn, or we should construct it
+	    String commonName = parseAttribute(dn, "cn");
+	    if (commonName == null) {
+		    if (p.getGivenNameList() != null && !p.getGivenNameList().isEmpty()) {
+		    	commonName += p.getGivenName(0) + " "; 
+		    }
+		    commonName += p.getFamilyName();
 	    }
-	    commonName += p.getFamilyName();;
+	    
 	    Attribute cn = new BasicAttribute("cn", commonName);
 	    Attribute sn = new BasicAttribute("sn", p.getFamilyName());
 	    Attribute givenNames = new BasicAttribute("givenName");
@@ -381,11 +396,6 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	    }
 	    Attribute isVerified = new BasicAttribute("isVerified", Boolean.FALSE.toString().toUpperCase());
 
-	    // Specify the DN we're adding
-	    // TODO: do we create the subject, or is it a given?
-	    Subject subject = p.getSubject();
-	    String dn = subject.getValue();
-	   
 	    try {
 		    DirContext ctx = getContext();
 	        Attributes orig = new BasicAttributes();
@@ -687,9 +697,15 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	}
 	
 	private String parseAttribute(String original, String attribute) {
-		String result = original;
-		result = result.substring(result.indexOf( attribute + "="), result.indexOf(","));
-		result = result.substring(result.indexOf("=") + 1) ;
+		String result = null;
+		try {
+			String temp = original;
+			temp = temp.substring(temp.indexOf( attribute + "="), temp.indexOf(","));
+			temp = temp.substring(temp.indexOf("=") + 1) ;
+			result = temp;
+		} catch (Exception e) {
+			log.warn("could not parse attribute from string");
+		}
 		return result;
 	}
 	
@@ -697,9 +713,11 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 		try {
 			
 			Subject p = new Subject();
-			p.setValue("cn=testGroup,dc=dataone,dc=org");
+//			p.setValue("cn=testGroup,dc=dataone,dc=org");
+			p.setValue("cn=test1,dc=dataone,dc=org");
 		
 			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
+//			identityService.setServer("ldap://bespin.nceas.ucsb.edu:389");
 			identityService.removeSubject(p);
 			
 		} catch (Exception e) {
