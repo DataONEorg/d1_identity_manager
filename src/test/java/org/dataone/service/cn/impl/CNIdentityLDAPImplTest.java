@@ -19,6 +19,7 @@ import org.junit.Test;
  */
 public class CNIdentityLDAPImplTest {
 	
+	// TODO: use Configuration to look up testing values
 	private String server = "ldap://fred.msi.ucsb.edu:389";
 	private String serverReplica = "ldap://bespin.nceas.ucsb.edu:389";
 	private int replicationDelay = 1000; // milliseconds

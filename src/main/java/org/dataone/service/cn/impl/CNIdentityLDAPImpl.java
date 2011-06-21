@@ -58,7 +58,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	public static Log log = LogFactory.getLog(CNIdentityLDAPImpl.class);
 	
 	// TODO: parameterize or configure somewhere else
-	private String server = "ldap://fred.msi.ucsb.edu:389";
+	private String server = "ldap://localhost:389";
 	private String admin = "cn=admin,dc=dataone,dc=org";
 	private String password = "password";
 	private String base = "dc=dataone,dc=org";
