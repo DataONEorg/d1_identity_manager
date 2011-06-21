@@ -13,7 +13,7 @@ include         /etc/ldap/schema/cosine.schema
 include         /etc/ldap/schema/nis.schema
 include         /etc/ldap/schema/inetorgperson.schema
 # local schema with d1 extensions
-include         /etc/ldap/schema/local.schema
+include         /etc/ldap/schema/dataone.schema
 
 # Where the pid file is put. The init.d script
 # will not stop the server if you change this.

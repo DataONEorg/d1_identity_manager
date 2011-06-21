@@ -10,8 +10,8 @@ Configuring OpenLDAP
 	-If you are using the default dataone tree, then you should only have to worry about specifying the admin password
 	-If you are setting up 2 (or more) replicas, you should pay attention to the "syncRepl" section and the server hostnames should be filled in correctly
 	-repeat these instructions for each replica, making sure each replica has a unique "serverID" (see template)
--Place the local.schema file in the the ldap schema extension directory:
-	/etc/ldap/schema/local.schema	
+-Place the dataone.schema file in the the ldap schema extension directory:
+	/etc/ldap/schema/dataone.schema	
 -Start slapd, pointing it to the configuration file
 	slapd -h 'ldap:/// ldapi:///' -f /etc/ldap/slapd.conf
 	-Note: /etc/init.d/slapd start will attempt to use the newer database-based configuration method so you should not use that until we finalize configuration and convert the .conf to the db method
