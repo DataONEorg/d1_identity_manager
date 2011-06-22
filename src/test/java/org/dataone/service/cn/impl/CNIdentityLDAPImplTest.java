@@ -6,6 +6,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import org.dataone.configuration.Settings;
 import org.dataone.service.cn.impl.CNIdentityLDAPImpl;
 import org.dataone.service.types.Person;
 import org.dataone.service.types.Session;
@@ -19,15 +20,15 @@ import org.junit.Test;
  */
 public class CNIdentityLDAPImplTest {
 	
-	// TODO: use Configuration to look up testing values
-	private String server = "ldap://fred.msi.ucsb.edu:389";
-	private String serverReplica = "ldap://bespin.nceas.ucsb.edu:389";
-	private int replicationDelay = 1000; // milliseconds
-	private int replicationAttempts = 10;
+	// use Configuration to look up testing values
+	private String server = Settings.getConfiguration().getString("test.ldap.server.1");
+	private String serverReplica = Settings.getConfiguration().getString("test.ldap.server.1");
+	private int replicationDelay = Settings.getConfiguration().getInt("test.replicationDelay"); // milliseconds
+	private int replicationAttempts = Settings.getConfiguration().getInt("test.replicationAttempts");
 
-	private String primarySubject = "cn=test1,dc=dataone,dc=org";
-	private String secondarySubject = "cn=test2,dc=dataone,dc=org";
-	private String groupName = "cn=testGroup,dc=dataone,dc=org";
+	private String primarySubject = Settings.getConfiguration().getString("test.primarySubject");
+	private String secondarySubject = Settings.getConfiguration().getString("test.secondarySubject");
+	private String groupName = Settings.getConfiguration().getString("test.groupName");
 
 	private static Session getSession(Subject subject) {
 		Session session = new Session();
@@ -153,7 +154,8 @@ public class CNIdentityLDAPImplTest {
 			//members.addPerson(person1);
 			members.addPerson(person2);
 			
-			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();		
+			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
+			identityService.setServer(server);
 			boolean check = false;
 			
 			// create subjects
@@ -205,7 +207,8 @@ public class CNIdentityLDAPImplTest {
 			person2.addGivenName("test2");
 			person2.addEmail("test2@dataone.org");
 			
-			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();		
+			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
+			identityService.setServer(server);
 			boolean check = false;
 			
 			// create subjects
@@ -264,6 +267,7 @@ public class CNIdentityLDAPImplTest {
 			//person.addEmail("test1@dataone.org");
 			
 			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
+			identityService.setServer(server);
 			Subject p = identityService.registerAccount(getSession(subject), person);
 			assertNotNull(p);
 			
@@ -298,6 +302,7 @@ public class CNIdentityLDAPImplTest {
 			person.addEmail("test1@dataone.org");
 			
 			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
+			identityService.setServer(server);
 			Subject p = identityService.registerAccount(getSession(subject), person);
 			assertNotNull(p);
 			
@@ -342,6 +347,7 @@ public class CNIdentityLDAPImplTest {
 			person.addEmail(email);
 			
 			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
+			identityService.setServer(server);
 			Subject p = identityService.registerAccount(getSession(subject), person);
 			assertNotNull(p);
 			
@@ -387,6 +393,7 @@ public class CNIdentityLDAPImplTest {
 			boolean check = false;
 
 			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
+			identityService.setServer(server);
 			Subject p = identityService.registerAccount(getSession(subject), person);
 			assertNotNull(p);
 			check = identityService.createGroup(getSession(subject), groupSubject);
