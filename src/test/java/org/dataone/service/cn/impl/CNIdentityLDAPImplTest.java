@@ -12,6 +12,7 @@ import org.dataone.service.types.Person;
 import org.dataone.service.types.Session;
 import org.dataone.service.types.Subject;
 import org.dataone.service.types.SubjectList;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -36,6 +37,7 @@ public class CNIdentityLDAPImplTest {
 		return session;
 	}
 	
+	@Ignore
 	@Test
 	public void checkOneWayReplication()  {
 	
@@ -81,6 +83,7 @@ public class CNIdentityLDAPImplTest {
 	
 	}
 	
+	@Ignore
     @Test
     public void checkOtherWayReplication()  {
 
