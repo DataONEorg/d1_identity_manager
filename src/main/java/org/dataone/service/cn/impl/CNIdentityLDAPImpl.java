@@ -21,6 +21,7 @@ import javax.naming.directory.SearchResult;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.dataone.configuration.Settings;
 import org.dataone.service.cn.CNIdentity;
 import org.dataone.service.exceptions.IdentifierNotUnique;
 import org.dataone.service.exceptions.InvalidCredentials;
@@ -57,11 +58,11 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	
 	public static Log log = LogFactory.getLog(CNIdentityLDAPImpl.class);
 	
-	// TODO: parameterize or configure somewhere else
-	private String server = "ldap://localhost:389";
-	private String admin = "cn=admin,dc=dataone,dc=org";
-	private String password = "password";
-	private String base = "dc=dataone,dc=org";
+	// look up defaults from configuration
+	private String server = Settings.getConfiguration().getString("identity.ldap.server");
+	private String admin = Settings.getConfiguration().getString("identity.ldap.admin");
+	private String password = Settings.getConfiguration().getString("identity.ldap.password");
+	private String base = Settings.getConfiguration().getString("identity.ldap.base");
 
 	@Override
 	public boolean createGroup(Session session, Subject groupName) throws ServiceFailure,
