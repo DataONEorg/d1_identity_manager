@@ -58,6 +58,8 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	
 	public static Log log = LogFactory.getLog(CNIdentityLDAPImpl.class);
 	
+	private DirContext context = null;
+	
 	// look up defaults from configuration
 	private String server = Settings.getConfiguration().getString("identity.ldap.server");
 	private String admin = Settings.getConfiguration().getString("identity.ldap.admin");
@@ -610,7 +612,14 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 		return pList;
 	}
 	
-	private DirContext getContext() throws NamingException {
+	public DirContext getContext() throws NamingException {
+		if (context == null) {
+			context = getDefaultContext();
+		}
+	    return context;
+	}
+	
+	private DirContext getDefaultContext() throws NamingException {
 		Hashtable<String, String> env = new Hashtable<String, String>();
 	    /*
 	     * Specify the initial context implementation to use.
