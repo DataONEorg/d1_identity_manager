@@ -31,6 +31,7 @@ import org.dataone.service.exceptions.NotAuthorized;
 import org.dataone.service.exceptions.NotFound;
 import org.dataone.service.exceptions.NotImplemented;
 import org.dataone.service.exceptions.ServiceFailure;
+import org.dataone.service.ldap.LDAPService;
 import org.dataone.service.types.Group;
 import org.dataone.service.types.Person;
 import org.dataone.service.types.Session;
@@ -54,17 +55,9 @@ import org.dataone.service.types.SubjectList;
  * @author leinfelder
  *
  */
-public class CNIdentityLDAPImpl implements CNIdentity {
+public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	
 	public static Log log = LogFactory.getLog(CNIdentityLDAPImpl.class);
-	
-	private DirContext context = null;
-	
-	// look up defaults from configuration
-	private String server = Settings.getConfiguration().getString("identity.ldap.server");
-	private String admin = Settings.getConfiguration().getString("identity.ldap.admin");
-	private String password = Settings.getConfiguration().getString("identity.ldap.password");
-	private String base = Settings.getConfiguration().getString("identity.ldap.base");
 
 	@Override
 	public boolean createGroup(Session session, Subject groupName) throws ServiceFailure,
@@ -612,111 +605,8 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 		return pList;
 	}
 	
-	public DirContext getContext() throws NamingException {
-		if (context == null) {
-			context = getDefaultContext();
-		}
-	    return context;
-	}
-	
-	private DirContext getDefaultContext() throws NamingException {
-		Hashtable<String, String> env = new Hashtable<String, String>();
-	    /*
-	     * Specify the initial context implementation to use.
-	     * This could also be set by using the -D option to the java program.
-	     * For example,
-	     *   java -Djava.naming.factory.initial=com.sun.jndi.ldap.LdapCtxFactory \
-	     *       Modattrs
-	     */
-	    env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
-	    /* Specify host and port to use for directory service */
-	    env.put(Context.PROVIDER_URL, server);
-	    /* specify authentication information */
-	    env.put(Context.SECURITY_AUTHENTICATION, "simple");
-	    env.put(Context.SECURITY_PRINCIPAL, admin);
-	    env.put(Context.SECURITY_CREDENTIALS, password);
-
-        /* get a handle to an Initial DirContext */
-        DirContext ctx = new InitialDirContext(env);
-	    return ctx;
-	}
-	
-	
-	public String getServer() {
-		return server;
-	}
-
-	public void setServer(String server) {
-		this.server = server;
-	}
-
-	public String getAdmin() {
-		return admin;
-	}
-
-	public void setAdmin(String admin) {
-		this.admin = admin;
-	}
-
-	public String getPassword() {
-		return password;
-	}
-
-	public void setPassword(String password) {
-		this.password = password;
-	}
-
 	public boolean removeSubject(Subject p) {
-		try {
-			DirContext ctx = getContext();
-			ctx.destroySubcontext(p.getValue());
-	    	log.debug("Removed entry: " + p.getValue());
-	    } catch (NamingException e) {
-	    	log.error("Error removing entry: " + p.getValue(), e);
-	        return false;
-	    }
-	    
-	    return true;
-	}
-	
-	// check the attribute for a given subject
-	public boolean checkAttribute(Subject subject, String attributeName, String attributeValue) {
-		try {
-			DirContext ctx = getContext();
-			SearchControls ctls = new SearchControls();
-		    ctls.setSearchScope(SearchControls.OBJECT_SCOPE);
-		    ctls.setReturningAttributes(new String[0]);  // do not return any attributes
-		    
-		    String searchCriteria = attributeName + "=" + attributeValue;
-		    
-	        NamingEnumeration results = 
-	            ctx.search(subject.getValue(), searchCriteria, ctls);
-	        
-	        boolean result = (results != null && results.hasMoreElements());
-	        if (result) {
-	        	log.debug("Found matching attribute: " + searchCriteria);
-	        } else {
-	        	log.warn("Did not find matching attribute: " + searchCriteria);
-	        }
-	        return result;
-	    } catch (NamingException e) {
-	    	log.error("Problem checking attribute: " + attributeName, e);
-	    }
-	    return false;
-		
-	}
-	
-	private String parseAttribute(String original, String attribute) {
-		String result = null;
-		try {
-			String temp = original;
-			temp = temp.substring(temp.indexOf( attribute + "="), temp.indexOf(","));
-			temp = temp.substring(temp.indexOf("=") + 1) ;
-			result = temp;
-		} catch (Exception e) {
-			log.warn("could not parse attribute from string");
-		}
-		return result;
+		return super.removeEntry(p.getValue());
 	}
 	
 	public static void main(String[] args) {
