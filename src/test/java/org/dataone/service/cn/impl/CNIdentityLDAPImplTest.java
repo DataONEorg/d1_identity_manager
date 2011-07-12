@@ -63,7 +63,7 @@ public class CNIdentityLDAPImplTest {
 			while (!check) {
 				// wait for replication to occur
 				Thread.sleep(replicationDelay);
-				check = identityService.checkAttribute(p, "isVerified", "FALSE");
+				check = identityService.checkAttribute(p.getValue(), "isVerified", "FALSE");
 				count++;
 				if (count >= replicationAttempts) {
 					break;
@@ -109,7 +109,7 @@ public class CNIdentityLDAPImplTest {
 			while (!check) {
 				// wait for replication to occur
 				Thread.sleep(replicationDelay);
-				check = identityService.checkAttribute(p, "isVerified", "FALSE");
+				check = identityService.checkAttribute(p.getValue(), "isVerified", "FALSE");
 				count++;
 				if (count >= replicationAttempts) {
 					break;
@@ -224,24 +224,24 @@ public class CNIdentityLDAPImplTest {
 			check = identityService.mapIdentity(getSession(p1), p2);
 			assertTrue(check);
 			// check pending
-			check = identityService.checkAttribute(p2, "equivalentIdentityRequest", p1.getValue());
+			check = identityService.checkAttribute(p2.getValue(), "equivalentIdentityRequest", p1.getValue());
 			assertTrue(check);
 			// request is one-way
-			check = identityService.checkAttribute(p1, "equivalentIdentityRequest", p2.getValue());
+			check = identityService.checkAttribute(p1.getValue(), "equivalentIdentityRequest", p2.getValue());
 			assertFalse(check);
 			// not yet confirmed on either end
-			check = identityService.checkAttribute(p1, "equivalentIdentity", p2.getValue());
+			check = identityService.checkAttribute(p1.getValue(), "equivalentIdentity", p2.getValue());
 			assertFalse(check);
-			check = identityService.checkAttribute(p2, "equivalentIdentity", p1.getValue());
+			check = identityService.checkAttribute(p2.getValue(), "equivalentIdentity", p1.getValue());
 			assertFalse(check);
 			// accept request
 			check = identityService.confirmMapIdentity(getSession(p2), p1);
 			assertTrue(check);
 			
 			// double check reciprocal mapping
-			check = identityService.checkAttribute(p1, "equivalentIdentity", p2.getValue());
+			check = identityService.checkAttribute(p1.getValue(), "equivalentIdentity", p2.getValue());
 			assertTrue(check);
-			check = identityService.checkAttribute(p2, "equivalentIdentity", p1.getValue());
+			check = identityService.checkAttribute(p2.getValue(), "equivalentIdentity", p1.getValue());
 			assertTrue(check);
 			
 			// clean up (this is not required for service to be functioning)
@@ -277,7 +277,7 @@ public class CNIdentityLDAPImplTest {
 			boolean check = false;
 			check = identityService.verifyAccount(getSession(subject), p);
 			assertTrue(check);
-			check = identityService.checkAttribute(p, "isVerified", "TRUE");
+			check = identityService.checkAttribute(p.getValue(), "isVerified", "TRUE");
 			assertTrue(check);
 			
 			//clean up
@@ -311,7 +311,7 @@ public class CNIdentityLDAPImplTest {
 			
 			boolean check = false;
 			// check that new email is NOT there
-			check = identityService.checkAttribute(p, "mail", newEmailAddress);
+			check = identityService.checkAttribute(p.getValue(), "mail", newEmailAddress);
 			assertFalse(check);
 			
 			// change their email address, check that it is there
@@ -319,7 +319,7 @@ public class CNIdentityLDAPImplTest {
 			person.addEmail(newEmailAddress);
 			p = identityService.updateAccount(getSession(subject), person);
 			assertNotNull(p);
-			check = identityService.checkAttribute(p, "mail", newEmailAddress);
+			check = identityService.checkAttribute(p.getValue(), "mail", newEmailAddress);
 			assertTrue(check);
 			
 			//clean up
