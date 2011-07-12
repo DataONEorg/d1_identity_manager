@@ -2,6 +2,8 @@ package org.dataone.service.cn;
 
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -52,18 +54,19 @@ public class ReserveIdentifierServiceTest {
 			pid.setValue("test");
 			
 			boolean check = false;
-
+			
+			Identifier retPid = null;
 			ReserveIdentifierService.getInstance().setServer(server);
-			check = ReserveIdentifierService.getInstance().reserveIdentifier(getSession(subject), pid);
-			assertTrue(check);
+			retPid = ReserveIdentifierService.getInstance().reserveIdentifier(getSession(subject), pid, null, null);
+			assertNotNull(retPid);
 			
 			// make sure that we get an error when attempting to reserve as  someone else
 			try {
-				check = ReserveIdentifierService.getInstance().reserveIdentifier(getSession(anotherSubject), pid);
+				retPid = ReserveIdentifierService.getInstance().reserveIdentifier(getSession(anotherSubject), pid, null, null);
 			} catch (IdentifierNotUnique inu) {
-				check = false;
+				retPid = null;
 			}
-			assertFalse(check);
+			assertNull(retPid);
 			
 			// now clean up
 //			check = service.removeReservation(getSession(subject), pid);
