@@ -19,6 +19,7 @@ import javax.naming.directory.SearchResult;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.dataone.service.exceptions.IdentifierNotUnique;
+import org.dataone.service.exceptions.NotAuthorized;
 import org.dataone.service.ldap.LDAPService;
 import org.dataone.service.types.Identifier;
 import org.dataone.service.types.Session;
@@ -64,6 +65,28 @@ public class ReserveIdentifierService extends LDAPService {
 		boolean result = addEntry(subject, pid);
 		
 		return result;
+	}
+	
+	public boolean removeReservation(Session session, Identifier pid) throws NotAuthorized {
+		Subject subject = session.getSubject();
+		boolean ownedBySubject = false;
+
+		// look up the identifier before attempting to add it
+		String dn = lookupDN(pid);
+		if (dn != null) {
+			// check that it is ours since it exists
+			ownedBySubject = checkAttribute(dn, "subject", subject.getValue());
+			if (!ownedBySubject) {
+				throw new NotAuthorized("0000", 
+						"Reserved Identifier (" + pid.getValue() + ") is not owned by subject, " + subject.getValue());
+			}
+			if (ownedBySubject) {
+				boolean result = removeEntry(dn);
+				return result;
+			}
+		}
+		
+		return false;
 	}
 	
 	/**
