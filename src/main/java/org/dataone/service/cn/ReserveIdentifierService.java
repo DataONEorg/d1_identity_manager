@@ -104,8 +104,10 @@ public class ReserveIdentifierService extends LDAPService {
 	    
 	    // construct a DN from time
 	    long time = System.currentTimeMillis();
-	    String dn = "id=reservedIdentifier." + time;
+	    String reservationId = "reservedIdentifier." + time;
+	    String dn = "reservationId=" + reservationId + "," + base;
 	    
+	    Attribute idAttribute = new BasicAttribute("reservationId", reservationId);
 	    Attribute subjectAttribute = new BasicAttribute("subject", subject.getValue());
 	    Attribute identifierAttribute = new BasicAttribute("identifier", pid.getValue());
 	    Attribute createdAttribute = new BasicAttribute("created", new Date(time));
@@ -114,7 +116,7 @@ public class ReserveIdentifierService extends LDAPService {
 		    DirContext ctx = getContext();
 	        Attributes orig = new BasicAttributes();
 	        orig.put(objClasses);
-
+	        orig.put(idAttribute);
 	        orig.put(subjectAttribute);
 	        orig.put(identifierAttribute);
 	        orig.put(createdAttribute);
