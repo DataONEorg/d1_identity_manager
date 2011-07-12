@@ -53,14 +53,13 @@ public class ReserveIdentifierServiceTest {
 			
 			boolean check = false;
 
-			ReserveIdentifierService service = new ReserveIdentifierService();
-			service.setServer(server);
-			check = service.reserveIdentifier(getSession(subject), pid);
+			ReserveIdentifierService.getInstance().setServer(server);
+			check = ReserveIdentifierService.getInstance().reserveIdentifier(getSession(subject), pid);
 			assertTrue(check);
 			
 			// make sure that we get an error when attempting to reserve as  someone else
 			try {
-				check = service.reserveIdentifier(getSession(anotherSubject), pid);
+				check = ReserveIdentifierService.getInstance().reserveIdentifier(getSession(anotherSubject), pid);
 			} catch (IdentifierNotUnique inu) {
 				check = false;
 			}
@@ -79,9 +78,8 @@ public class ReserveIdentifierServiceTest {
 	
 	@Test
 	public void expire()  {
-		ReserveIdentifierService service = new ReserveIdentifierService();
-		service.setServer(server);
-		service.expireEntries(0);
+		ReserveIdentifierService.getInstance().setServer(server);
+		ReserveIdentifierService.getInstance().expireEntries(0);
 	}
 	
 	

@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import javax.naming.NameAlreadyBoundException;
 import javax.naming.NamingEnumeration;
@@ -39,6 +41,19 @@ public class ReserveIdentifierService extends LDAPService {
 	public static Log log = LogFactory.getLog(ReserveIdentifierService.class);
 	
 	private static SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMddHHmmss'Z'");
+	
+	private static ReserveIdentifierService instance = null;
+	
+	public static ReserveIdentifierService getInstance() {
+		if (instance == null) {
+			instance = new ReserveIdentifierService();
+		}
+		return instance;
+	}
+	
+	private ReserveIdentifierService() {
+		initSchedule();
+	}
 	
 	/**
 	 * Reserves the given Identifier for the Subject in the Session
@@ -173,6 +188,22 @@ public class ReserveIdentifierService extends LDAPService {
 			}
 		}
 		
+	}
+	
+	/**
+	 * Initializes a timer to run expiration checking every hour
+	 */
+	private void initSchedule() {
+		// run expiration every hour
+		Timer timer = new Timer(true);
+		TimerTask task = new TimerTask() {
+			@Override
+			public void run() {
+				getInstance().expireEntries(1);
+			}			
+		};
+		long period = 1000 * 60 * 60 * 1;
+		timer.scheduleAtFixedRate(task, Calendar.getInstance().getTime(), period);
 	}
 	
 	/**
