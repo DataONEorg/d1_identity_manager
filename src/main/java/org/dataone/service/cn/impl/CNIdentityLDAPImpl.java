@@ -111,7 +111,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	        
 	        // check that they have admin rights for group
 	        Subject user = session.getSubject();
-	        boolean canEdit = this.checkAttribute(groupName, "owner", user.getValue());
+	        boolean canEdit = this.checkAttribute(groupName.getValue(), "owner", user.getValue());
 	        if (!canEdit) {
 	        	throw new NotAuthorized(null, "Subject not in owner list: " + user.getValue());
 	        }
@@ -129,7 +129,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	        }
 	        for (Subject subject: subjects) {
 		        // check that they are not already a member
-	        	boolean isMember = this.checkAttribute(groupName, "uniqueMember", subject.getValue());
+	        	boolean isMember = this.checkAttribute(groupName.getValue(), "uniqueMember", subject.getValue());
 	        	if (isMember) {
 			        log.warn("Already a member: " + subject.getValue() + " of group: " + groupName.getValue() );
 	        		continue;
@@ -158,7 +158,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	        
 	        // check that they have admin rights for group
 	        Subject user = session.getSubject();
-	        boolean canEdit = this.checkAttribute(groupName, "owner", user.getValue());
+	        boolean canEdit = this.checkAttribute(groupName.getValue(), "owner", user.getValue());
 	        if (!canEdit) {
 	        	throw new NotAuthorized(null, "Subject not in owner list: " + user.getValue());
 	        }
@@ -205,7 +205,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	        
 	        // check if primary is confirming secondary
 	        boolean confirmationRequest = 
-	        	checkAttribute(primarySubject, "equivalentIdentityRequest", secondarySubject.getValue());
+	        	checkAttribute(primarySubject.getValue(), "equivalentIdentityRequest", secondarySubject.getValue());
 	        
 	        ModificationItem[] mods = null;
 	        Attribute mod0 = null;
@@ -244,7 +244,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		    
 		    // check if primary is confirming secondary
 		    boolean confirmationRequest = 
-		    	checkAttribute(primarySubject, "equivalentIdentityRequest", secondarySubject.getValue());
+		    	checkAttribute(primarySubject.getValue(), "equivalentIdentityRequest", secondarySubject.getValue());
 		    
 		    ModificationItem[] mods = null;
 		    Attribute mod0 = null;

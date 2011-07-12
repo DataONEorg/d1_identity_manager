@@ -1,18 +1,22 @@
 package org.dataone.service.ldap;
 
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.Hashtable;
+import java.util.List;
 
 import javax.naming.Context;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
+import javax.naming.directory.Attribute;
 import javax.naming.directory.DirContext;
 import javax.naming.directory.InitialDirContext;
 import javax.naming.directory.SearchControls;
+import javax.naming.directory.SearchResult;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.dataone.configuration.Settings;
-import org.dataone.service.types.Subject;
 
 
 /**
@@ -102,7 +106,7 @@ public class LDAPService {
 	}
 	
 	// check the attribute for a given subject
-	public boolean checkAttribute(Subject subject, String attributeName, String attributeValue) {
+	public boolean checkAttribute(String dn, String attributeName, String attributeValue) {
 		try {
 			DirContext ctx = getContext();
 			SearchControls ctls = new SearchControls();
@@ -112,7 +116,7 @@ public class LDAPService {
 		    String searchCriteria = attributeName + "=" + attributeValue;
 		    
 	        NamingEnumeration results = 
-	            ctx.search(subject.getValue(), searchCriteria, ctls);
+	            ctx.search(dn, searchCriteria, ctls);
 	        
 	        boolean result = (results != null && results.hasMoreElements());
 	        if (result) {
@@ -126,6 +130,38 @@ public class LDAPService {
 	    }
 	    return false;
 		
+	}
+	
+	public List<Object> getAttributeValues(String dn, String attributeName) {
+		try {
+			DirContext ctx = getContext();
+			SearchControls ctls = new SearchControls();
+		    ctls.setSearchScope(SearchControls.OBJECT_SCOPE);
+		    ctls.setReturningAttributes(new String[] {attributeName});  // just the one we want
+		    
+		    String searchCriteria = attributeName + "=*" ;
+		    
+		    NamingEnumeration<SearchResult> results = 
+	            ctx.search(dn, searchCriteria, ctls);
+	        
+	        SearchResult result;
+			if (results != null ) {
+	        	log.debug("Found matching attribute: " + searchCriteria);
+	    		List<Object> values = new ArrayList<Object>();
+	        	while (results.hasMore()) {
+	        		result = results.next();
+	        		NamingEnumeration<? extends Attribute> attributes = result.getAttributes().getAll();
+	        		while (attributes.hasMore()) {
+	        			Object value = attributes.next().get();
+	        			values.add(value);
+	        		}
+	        	}
+	        	return values;
+	        }
+	    } catch (NamingException e) {
+	    	log.error("Problem checking attribute: " + attributeName, e);
+	    }
+	    return null;
 	}
 	
 	protected String parseAttribute(String original, String attribute) {
