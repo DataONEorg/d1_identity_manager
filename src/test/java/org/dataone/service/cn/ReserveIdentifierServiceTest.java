@@ -8,12 +8,12 @@ import static org.junit.Assert.fail;
 import org.dataone.configuration.Settings;
 import org.dataone.service.exceptions.IdentifierNotUnique;
 import org.dataone.service.types.Identifier;
-import org.dataone.service.types.Person;
 import org.dataone.service.types.Session;
 import org.dataone.service.types.Subject;
 import org.junit.Test;
 
 /**
+ *	Tests the LDAP implementation for reserving Identifiers on the CN
  *
  * @author leinfelder
  */
@@ -67,8 +67,8 @@ public class ReserveIdentifierServiceTest {
 			assertFalse(check);
 			
 			// now clean up
-			check = service.removeReservation(getSession(subject), pid);
-			assertTrue(check);
+//			check = service.removeReservation(getSession(subject), pid);
+//			assertTrue(check);
 	
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -76,5 +76,13 @@ public class ReserveIdentifierServiceTest {
 		}
 	
 	}
+	
+	@Test
+	public void expire()  {
+		ReserveIdentifierService service = new ReserveIdentifierService();
+		service.setServer(server);
+		service.expireEntries(0);
+	}
+	
 	
 }

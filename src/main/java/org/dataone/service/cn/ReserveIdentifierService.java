@@ -1,5 +1,7 @@
 package org.dataone.service.cn;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -36,6 +38,8 @@ public class ReserveIdentifierService extends LDAPService {
 
 	public static Log log = LogFactory.getLog(ReserveIdentifierService.class);
 	
+	private static SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMddHHmmss'Z'");
+	
 	/**
 	 * Reserves the given Identifier for the Subject in the Session
 	 * Checks ownership of the pid by the subject if it already exists
@@ -55,8 +59,9 @@ public class ReserveIdentifierService extends LDAPService {
 			// check that it is ours since it exists
 			ownedBySubject = checkAttribute(dn, "subject", subject.getValue());
 			if (!ownedBySubject) {
-				throw new IdentifierNotUnique("0000", 
-						"Identifier (" + pid.getValue() + ") is reserved and not owned by subject, " + subject.getValue());
+				String msg = "Identifier (" + pid.getValue() + ") is reserved and not owned by subject, " + subject.getValue();
+				log.warn(msg);
+				throw new IdentifierNotUnique("0000", msg);
 			}
 			// TODO: update the date of the reservation?
 		}
@@ -77,8 +82,8 @@ public class ReserveIdentifierService extends LDAPService {
 			// check that it is ours since it exists
 			ownedBySubject = checkAttribute(dn, "subject", subject.getValue());
 			if (!ownedBySubject) {
-				throw new NotAuthorized("0000", 
-						"Reserved Identifier (" + pid.getValue() + ") is not owned by subject, " + subject.getValue());
+				String msg = "Reserved Identifier (" + pid.getValue() + ") is not owned by subject, " + subject.getValue();
+				throw new NotAuthorized("0000", msg);
 			}
 			if (ownedBySubject) {
 				boolean result = removeEntry(dn);
@@ -103,14 +108,15 @@ public class ReserveIdentifierService extends LDAPService {
 	    objClasses.add("d1Reservation");
 	    
 	    // construct a DN from time
-	    long time = System.currentTimeMillis();
-	    String reservationId = "reservedIdentifier." + time;
+	    Calendar now = Calendar.getInstance();
+	    String reservationId = "reservedIdentifier." + now.getTimeInMillis();
 	    String dn = "reservationId=" + reservationId + "," + base;
+	    String created = dateFormat.format(now.getTime());
 	    
 	    Attribute idAttribute = new BasicAttribute("reservationId", reservationId);
 	    Attribute subjectAttribute = new BasicAttribute("subject", subject.getValue());
 	    Attribute identifierAttribute = new BasicAttribute("identifier", pid.getValue());
-	    Attribute createdAttribute = new BasicAttribute("created", new Date(time));
+	    Attribute createdAttribute = new BasicAttribute("created", created);
 	    
 	    try {
 		    DirContext ctx = getContext();
@@ -142,13 +148,22 @@ public class ReserveIdentifierService extends LDAPService {
 	 * the numberOfDays specified
 	 * @param numberOfDays
 	 */
-	private void expireEntries(int numberOfDays) {
+	public void expireEntries(int numberOfDays) {
 		List<Identifier> identifiers = lookupReserverdIdentifiers();
 		for (Identifier pid: identifiers) {
 			// get the DN
 			String dn = lookupDN(pid);
 			// get the created attribute
-			Date created = (Date) getAttributeValues(dn, "created").get(0);
+			String createdObj = (String) getAttributeValues(dn, "created").get(0);
+			//Date created = DatatypeConverter.parseDateTime(createdObj).getTime();
+			Date created = null;
+			try {
+				created = dateFormat.parse(createdObj);
+			} catch (ParseException e) {
+				log.error("(skipping) Could not parse created date for entry: " + dn, e);
+				continue;
+			}
+
 			Calendar expires = Calendar.getInstance();
 			expires.setTime(created);
 			expires.add(Calendar.DATE, numberOfDays);
@@ -218,7 +233,7 @@ public class ReserveIdentifierService extends LDAPService {
 		    ctls.setSearchScope(SearchControls.SUBTREE_SCOPE);
 		    
 		    // search for the given pid
-		    String searchCriteria = "&((objectClass=d1Reservation)(identifier=" + pid.getValue() + "))";
+		    String searchCriteria = "(&(objectClass=d1Reservation)(identifier=" + pid.getValue() + "))";
 		    
 	        NamingEnumeration<SearchResult> results = 
 	            ctx.search(base, searchCriteria, ctls);
