@@ -64,7 +64,10 @@ public class ReserveIdentifierService extends LDAPService {
 	 * @return
 	 * @throws IdentifierNotUnique
 	 */
-	public boolean reserveIdentifier(Session session, Identifier pid) throws IdentifierNotUnique {
+	public Identifier reserveIdentifier(Session session, Identifier pid, String scope, String format) throws IdentifierNotUnique {
+		
+		// TODO: construct pid from scope+format+calling some service
+		
 		Subject subject = session.getSubject();
 		boolean ownedBySubject = false;
 
@@ -84,7 +87,7 @@ public class ReserveIdentifierService extends LDAPService {
 		// add an entry for the subject and pid
 		boolean result = addEntry(subject, pid);
 		
-		return result;
+		return pid;
 	}
 	
 	public boolean removeReservation(Session session, Identifier pid) throws NotAuthorized {
