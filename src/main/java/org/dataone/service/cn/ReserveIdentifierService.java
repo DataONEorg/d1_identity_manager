@@ -42,18 +42,7 @@ public class ReserveIdentifierService extends LDAPService {
 	
 	private static SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMddHHmmss'Z'");
 	
-	private static ReserveIdentifierService instance = null;
-	
-	public static ReserveIdentifierService getInstance() {
-		if (instance == null) {
-			instance = new ReserveIdentifierService();
-		}
-		return instance;
-	}
-	
-	private ReserveIdentifierService() {
-		initSchedule();
-	}
+	private static Timer timer = null;
 	
 	/**
 	 * Reserves the given Identifier for the Subject in the Session
@@ -194,17 +183,27 @@ public class ReserveIdentifierService extends LDAPService {
 	}
 	
 	/**
-	 * Initializes a timer to run expiration checking every hour
+	 * Initializes the timer to run expiration checking every hour
+	 * for the given service. All previously scheduled tasks are cancelled
+	 * in favor of the service given in the param
+	 * @param service the service instance that will be used to expire the entries
 	 */
-	private void initSchedule() {
-		// run expiration every hour
-		Timer timer = new Timer(true);
+	public static void schedule(final ReserveIdentifierService service) {
+		// cancel any previous schedule in favor of the service param
+		if (timer != null) {
+			timer.cancel();
+		}
+		// make a new timer
+		timer = new Timer(true);
+		// schedule the invocation
 		TimerTask task = new TimerTask() {
 			@Override
 			public void run() {
-				getInstance().expireEntries(1);
+				// expire day-old entries
+				service.expireEntries(1);
 			}			
-		};
+		};	
+		// run expiration every hour
 		long period = 1000 * 60 * 60 * 1;
 		timer.scheduleAtFixedRate(task, Calendar.getInstance().getTime(), period);
 	}
