@@ -156,7 +156,7 @@ public class ReserveIdentifierService extends LDAPService {
 	 * @param numberOfDays
 	 */
 	public void expireEntries(int numberOfDays) {
-		List<Identifier> identifiers = lookupReserverdIdentifiers();
+		List<Identifier> identifiers = lookupReservedIdentifiers();
 		for (Identifier pid: identifiers) {
 			// get the DN
 			String dn = lookupDN(pid);
@@ -212,7 +212,7 @@ public class ReserveIdentifierService extends LDAPService {
 	 * Find all the reserved Identifiers
 	 * @return list of previously reserved Identifiers
 	 */
-	private List<Identifier> lookupReserverdIdentifiers() {
+	private List<Identifier> lookupReservedIdentifiers() {
 		
 		List<Identifier> identifiers = new ArrayList<Identifier>();
 
