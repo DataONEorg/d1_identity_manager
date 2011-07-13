@@ -3,6 +3,7 @@ package org.dataone.service.cn;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import org.dataone.configuration.Settings;
@@ -68,9 +69,13 @@ public class ReserveIdentifierServiceTest {
 			}
 			assertNull(retPid);
 			
+			// check that he still have the reservation
+			check = service.hasReservation(getSession(subject), pid);
+			assertTrue(check);
+			
 			// now clean up
-//			check = service.removeReservation(getSession(subject), pid);
-//			assertTrue(check);
+			check = service.removeReservation(getSession(subject), pid);
+			assertTrue(check);
 	
 		} catch (Exception e) {
 			e.printStackTrace();

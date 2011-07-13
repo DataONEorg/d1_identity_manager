@@ -24,6 +24,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.dataone.service.exceptions.IdentifierNotUnique;
 import org.dataone.service.exceptions.NotAuthorized;
+import org.dataone.service.exceptions.NotFound;
 import org.dataone.service.ldap.LDAPService;
 import org.dataone.service.types.Identifier;
 import org.dataone.service.types.Session;
@@ -79,26 +80,50 @@ public class ReserveIdentifierService extends LDAPService {
 		return pid;
 	}
 	
-	public boolean removeReservation(Session session, Identifier pid) throws NotAuthorized {
-		Subject subject = session.getSubject();
-		boolean ownedBySubject = false;
-
-		// look up the identifier before attempting to add it
-		String dn = lookupDN(pid);
-		if (dn != null) {
-			// check that it is ours since it exists
-			ownedBySubject = checkAttribute(dn, "subject", subject.getValue());
-			if (!ownedBySubject) {
-				String msg = "Reserved Identifier (" + pid.getValue() + ") is not owned by subject, " + subject.getValue();
-				throw new NotAuthorized("0000", msg);
-			}
-			if (ownedBySubject) {
+	/**
+	 * 
+	 * @param session
+	 * @param pid
+	 * @return
+	 * @throws NotAuthorized
+	 * @throws NotFound 
+	 */
+	public boolean removeReservation(Session session, Identifier pid) throws NotAuthorized, NotFound {
+		
+		// check that we have the reservation
+		if (hasReservation(session, pid)) {
+			// look up the dn to remove it
+			String dn = lookupDN(pid);
+			if (dn != null) {
 				boolean result = removeEntry(dn);
 				return result;
 			}
 		}
 		
 		return false;
+	}
+	
+	public boolean hasReservation(Session session, Identifier pid) throws NotAuthorized, NotFound {
+		Subject subject = session.getSubject();
+		boolean ownedBySubject = false;
+
+		// look up the identifier
+		String dn = lookupDN(pid);
+		
+		if (dn == null) {
+			String msg = "No reservation found for pid: " + pid.getValue();
+			throw new NotFound("0000", msg);
+		} else {
+			// check that it is ours since it exists
+			ownedBySubject = checkAttribute(dn, "subject", subject.getValue());
+			if (!ownedBySubject) {
+				String msg = "Reserved Identifier (" + pid.getValue() + ") is not owned by subject, " + subject.getValue();
+				throw new NotAuthorized("0000", msg);
+			}
+		}
+		
+		// we got this far, it is ours
+		return true;
 	}
 	
 	/**
