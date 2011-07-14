@@ -402,7 +402,7 @@ public class CNIdentityLDAPImplTest {
 			assertNotNull(p);
 			Subject retGroup = null;
 			retGroup = identityService.createGroup(getSession(subject), groupSubject);
-			assertTrue(check);
+			assertNotNull(retGroup);
 //			check = identityService.addGroupMembers(getSession(subject), groupSubject, members);
 //			assertTrue(check);
 			
