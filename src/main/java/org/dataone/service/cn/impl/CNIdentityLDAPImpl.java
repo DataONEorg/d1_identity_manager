@@ -60,7 +60,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	public static Log log = LogFactory.getLog(CNIdentityLDAPImpl.class);
 
 	@Override
-	public boolean createGroup(Session session, Subject groupName) throws ServiceFailure,
+	public Subject createGroup(Session session, Subject groupName) throws ServiceFailure,
 			InvalidToken, NotAuthorized, NotFound, NotImplemented,
 			InvalidRequest, IdentifierNotUnique {
 		
@@ -97,10 +97,10 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	        //return false;
 	    } catch (NamingException e) {
 	    	log.error("Problem creating group." + e);
-	        return false;
+	        return null;
 	    }
 	    
-		return true;
+		return groupName;
 	}
 	
 	@Override
