@@ -168,8 +168,9 @@ public class CNIdentityLDAPImplTest {
 			assertNotNull(subject);
 			
 			// group
-			check = identityService.createGroup(getSession(p1), groupSubject);
-			assertTrue(check);
+			Subject retGroup = null;
+			retGroup = identityService.createGroup(getSession(p1), groupSubject);
+			assertNotNull(retGroup);
 			check = identityService.addGroupMembers(getSession(p1), groupSubject, members);
 			assertTrue(check);
 			check = identityService.removeGroupMembers(getSession(p1), groupSubject, members);
@@ -399,7 +400,8 @@ public class CNIdentityLDAPImplTest {
 			identityService.setServer(server);
 			Subject p = identityService.registerAccount(getSession(subject), person);
 			assertNotNull(p);
-			check = identityService.createGroup(getSession(subject), groupSubject);
+			Subject retGroup = null;
+			retGroup = identityService.createGroup(getSession(subject), groupSubject);
 			assertTrue(check);
 //			check = identityService.addGroupMembers(getSession(subject), groupSubject, members);
 //			assertTrue(check);
