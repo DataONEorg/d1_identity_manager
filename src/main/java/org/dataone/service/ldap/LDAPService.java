@@ -1,7 +1,6 @@
 package org.dataone.service.ldap;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.Hashtable;
 import java.util.List;
 
@@ -9,6 +8,9 @@ import javax.naming.Context;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
 import javax.naming.directory.Attribute;
+import javax.naming.directory.Attributes;
+import javax.naming.directory.BasicAttribute;
+import javax.naming.directory.BasicAttributes;
 import javax.naming.directory.DirContext;
 import javax.naming.directory.InitialDirContext;
 import javax.naming.directory.SearchControls;
@@ -165,8 +167,12 @@ public class LDAPService {
 		String result = null;
 		try {
 			String temp = original;
-			temp = temp.substring(temp.indexOf( attribute + "="), temp.indexOf(","));
-			temp = temp.substring(temp.indexOf("=") + 1) ;
+			// ignore case
+			int start = temp.toLowerCase().indexOf(attribute.toLowerCase() + "=");
+			int end = temp.indexOf(",", start);
+			temp = temp.substring(start, end);
+			start = temp.indexOf("=") + 1;
+			temp = temp.substring(start);
 			result = temp;
 		} catch (Exception e) {
 			log.warn("could not parse attribute from string");
@@ -186,6 +192,104 @@ public class LDAPService {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+	}
+	
+	/**
+	 * Constructs the necessary LDAP tree for the given DN
+	 * Assuming CILogon format of
+	 * 		CN=Benjamin Leinfelder A515,O=University of Chicago,C=US,DC=cilogon,DC=org
+	 * @param dn the full DN from CILogon
+	 * @return true if successfully added
+	 * @throws NamingException
+	 */
+	protected boolean constructTree(String dn) throws NamingException {
+	    // get the attributes
+		String org = parseAttribute(dn, "o");
+	    String country = parseAttribute(dn, "c");
+
+	    // get the partial DNs
+		String orgDN = dn.substring(dn.indexOf(",") + 1);
+		String countryDN = orgDN.substring(orgDN.indexOf(",") + 1);
+
+	    boolean exists = false;
+	    // check for the country
+    	try {
+    		exists = checkAttribute(countryDN, "c", country);
+    	} catch (Exception e) {
+			exists = false;
+		}
+	    if (!exists) {
+	    	addCountry(countryDN);
+	    }
+	    
+	    // check for the org
+    	try {
+    		exists = checkAttribute(orgDN, "o", org);
+    	} catch (Exception e) {
+			exists = false;
+		}
+	    if (!exists) {
+	    	addOrg(orgDN);
+	    }
+	    return true;
+	}
+	
+	/**
+	 * Adds the organization branch
+	 * 	O=University of Chicago,C=US,DC=cilogon,DC=org
+	 * @param dn the DN for the Organization being added
+	 * @return true if added sucessfully
+	 * @throws NamingException
+	 */
+	protected boolean addOrg(String dn) throws NamingException {
+		// Values we'll use in creating the entry
+	    Attribute objClasses = new BasicAttribute("objectclass");
+	    //objClasses.add("top");
+	    objClasses.add("organization");
+	    
+	    // get the parts
+	    String org = parseAttribute(dn, "o");
+	    Attribute oAttribute = new BasicAttribute("o", org);
+	    
+	    DirContext ctx = getContext();
+        Attributes orig = new BasicAttributes();
+        orig.put(objClasses);
+        orig.put(oAttribute);
+
+        // Add the entry
+        ctx.createSubcontext(dn, orig);
+        log.debug( "Added entry " + dn);
+
+		return true;	
+	}
+	
+	/**
+	 * Adds the country branch
+	 * 	C=US,DC=cilogon,DC=org
+	 * @param dn the DN of the country being added
+	 * @return true if added successfully
+	 * @throws NamingException
+	 */
+	protected boolean addCountry(String dn) throws NamingException {
+		// Values we'll use in creating the entry
+	    Attribute objClasses = new BasicAttribute("objectclass");
+	    //objClasses.add("top");
+	    objClasses.add("country");
+	    
+	    // get the parts
+	    String country = parseAttribute(dn, "c");
+	    Attribute cAttribute = new BasicAttribute("c", country);
+	    
+	    DirContext ctx = getContext();
+        Attributes orig = new BasicAttributes();
+        orig.put(objClasses);
+        orig.put(cAttribute);
+
+        // Add the entry
+        ctx.createSubcontext(dn, orig);
+        log.debug( "Added entry " + dn);
+
+		return true;	
 	}
 
 }

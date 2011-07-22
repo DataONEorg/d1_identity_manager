@@ -362,9 +362,17 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	    objClasses.add("inetOrgPerson");
 	    objClasses.add("d1Principal");
 	    
-	    // TODO: do we create the subject, or is it a given?
+	    // get the DN
 	    Subject subject = p.getSubject();
 	    String dn = subject.getValue();
+	    
+	    // construct the tree as needed
+	    try {
+			constructTree(dn);
+		} catch (NamingException e) {
+			e.printStackTrace();
+	    	throw new ServiceFailure("4520", "Could not counstruct partial tree: " + e.getMessage());
+		}
 	    
 	    // either it's in the dn, or we should construct it
 	    String commonName = parseAttribute(dn, "cn");
