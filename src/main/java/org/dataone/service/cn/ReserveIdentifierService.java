@@ -22,6 +22,7 @@ import javax.naming.directory.SearchResult;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.dataone.configuration.Settings;
 import org.dataone.service.exceptions.IdentifierNotUnique;
 import org.dataone.service.exceptions.NotAuthorized;
 import org.dataone.service.exceptions.NotFound;
@@ -44,6 +45,11 @@ public class ReserveIdentifierService extends LDAPService {
 	private static SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMddHHmmss'Z'");
 	
 	private static Timer timer = null;
+	
+	public ReserveIdentifierService() {
+		// we need to use a different base for the ids
+		this.base = Settings.getConfiguration().getString("reserveIdentifier.ldap.base");
+	}
 	
 	/**
 	 * Reserves the given Identifier for the Subject in the Session
