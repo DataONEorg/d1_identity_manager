@@ -610,8 +610,8 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		try {
 			
 			Subject p = new Subject();
-//			p.setValue("cn=testGroup,dc=dataone,dc=org");
-			p.setValue("cn=testGroup,dc=dataone,dc=org");
+//			p.setValue("cn=testGroup,dc=cilogon,dc=org");
+			p.setValue("cn=testGroup,dc=cilogon,dc=org");
 		
 			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
 //			identityService.setServer("ldap://bespin.nceas.ucsb.edu:389");

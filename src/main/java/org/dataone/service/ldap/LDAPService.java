@@ -132,35 +132,32 @@ public class LDAPService {
 		
 	}
 	
-	public List<Object> getAttributeValues(String dn, String attributeName) {
-		try {
-			DirContext ctx = getContext();
-			SearchControls ctls = new SearchControls();
-		    ctls.setSearchScope(SearchControls.OBJECT_SCOPE);
-		    ctls.setReturningAttributes(new String[] {attributeName});  // just the one we want
-		    
-		    String searchCriteria = attributeName + "=*" ;
-		    
-		    NamingEnumeration<SearchResult> results = 
-	            ctx.search(dn, searchCriteria, ctls);
-	        
-	        SearchResult result;
-			if (results != null ) {
-	        	log.debug("Found matching attribute: " + searchCriteria);
-	    		List<Object> values = new ArrayList<Object>();
-	        	while (results.hasMore()) {
-	        		result = results.next();
-	        		NamingEnumeration<? extends Attribute> attributes = result.getAttributes().getAll();
-	        		while (attributes.hasMore()) {
-	        			Object value = attributes.next().get();
-	        			values.add(value);
-	        		}
-	        	}
-	        	return values;
-	        }
-	    } catch (NamingException e) {
-	    	log.error("Problem checking attribute: " + attributeName, e);
-	    }
+	public List<Object> getAttributeValues(String dn, String attributeName) throws NamingException {
+		DirContext ctx = getContext();
+		SearchControls ctls = new SearchControls();
+	    ctls.setSearchScope(SearchControls.OBJECT_SCOPE);
+	    ctls.setReturningAttributes(new String[] {attributeName});  // just the one we want
+	    
+	    String searchCriteria = attributeName + "=*" ;
+	    
+	    NamingEnumeration<SearchResult> results = 
+            ctx.search(dn, searchCriteria, ctls);
+        
+        SearchResult result;
+		if (results != null ) {
+        	log.debug("Found matching attribute: " + searchCriteria);
+    		List<Object> values = new ArrayList<Object>();
+        	while (results.hasMore()) {
+        		result = results.next();
+        		NamingEnumeration<? extends Attribute> attributes = result.getAttributes().getAll();
+        		while (attributes.hasMore()) {
+        			Object value = attributes.next().get();
+        			values.add(value);
+        		}
+        	}
+        	return values;
+        }
+	    
 	    return null;
 	}
 	
@@ -180,7 +177,7 @@ public class LDAPService {
 	public static void main(String[] args) {
 		try {
 			
-			String dn = "cn=test1,dc=dataone,dc=org";
+			String dn = "cn=test1,dc=cilogon,dc=org";
 		
 			LDAPService identityService = new LDAPService();
 //			identityService.setServer("ldap://bespin.nceas.ucsb.edu:389");

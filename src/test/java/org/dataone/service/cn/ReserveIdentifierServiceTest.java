@@ -6,6 +6,8 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import javax.naming.NamingException;
+
 import org.dataone.configuration.Settings;
 import org.dataone.service.exceptions.IdentifierNotUnique;
 import org.dataone.service.types.Identifier;
@@ -88,7 +90,12 @@ public class ReserveIdentifierServiceTest {
 	public void expire()  {
 		ReserveIdentifierService service = new ReserveIdentifierService();
 		service.setServer(server);
-		service.expireEntries(0);
+		try {
+			service.expireEntries(0);
+		} catch (NamingException e) {
+			e.printStackTrace();
+			fail();
+		}
 	}
 	
 	
