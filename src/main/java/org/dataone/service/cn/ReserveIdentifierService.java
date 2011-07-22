@@ -179,8 +179,9 @@ public class ReserveIdentifierService extends LDAPService {
 	 * Searches for all reservedIdentifiers and removes those which are older than
 	 * the numberOfDays specified
 	 * @param numberOfDays
+	 * @throws NamingException 
 	 */
-	public void expireEntries(int numberOfDays) {
+	public void expireEntries(int numberOfDays) throws NamingException {
 		List<Identifier> identifiers = lookupReservedIdentifiers();
 		for (Identifier pid: identifiers) {
 			// get the DN
@@ -225,7 +226,12 @@ public class ReserveIdentifierService extends LDAPService {
 			@Override
 			public void run() {
 				// expire day-old entries
-				service.expireEntries(1);
+				try {
+					service.expireEntries(1);
+				} catch (NamingException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 			}			
 		};	
 		// run expiration every hour
