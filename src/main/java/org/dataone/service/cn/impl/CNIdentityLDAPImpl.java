@@ -1,11 +1,8 @@
 package org.dataone.service.cn.impl;
 
 import java.util.ArrayList;
-import java.util.Enumeration;
-import java.util.Hashtable;
 import java.util.List;
 
-import javax.naming.Context;
 import javax.naming.NameAlreadyBoundException;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
@@ -14,14 +11,12 @@ import javax.naming.directory.Attributes;
 import javax.naming.directory.BasicAttribute;
 import javax.naming.directory.BasicAttributes;
 import javax.naming.directory.DirContext;
-import javax.naming.directory.InitialDirContext;
 import javax.naming.directory.ModificationItem;
 import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.dataone.configuration.Settings;
 import org.dataone.service.cn.CNIdentity;
 import org.dataone.service.exceptions.IdentifierNotUnique;
 import org.dataone.service.exceptions.InvalidCredentials;
@@ -92,12 +87,13 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	        ctx.createSubcontext(dn, orig);
 	        log.debug( "Created group " + dn + ".");
 	    } catch (NameAlreadyBoundException e) {
-	        // If entry exists already, fine.  Ignore this error.
-	    	log.warn("Group " + dn + " already exists, no need to create");
+	        // If entry exists
+	    	String msg = "Group " + dn + " already exists";
+	    	log.warn(msg);
+	    	throw new IdentifierNotUnique("2400", msg);
 	        //return false;
 	    } catch (NamingException e) {
-	    	log.error("Problem creating group." + e);
-	        return null;
+	    	throw new ServiceFailure("2490", "Could not create group: " + e.getMessage());
 	    }
 	    
 		return groupName;
@@ -143,7 +139,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		        log.debug("Added member: " + subject.getValue() + " to group: " + groupName.getValue() );
 	        }
 	    } catch (Exception e) {
-	        throw new ServiceFailure(null, e.getMessage());
+	        throw new ServiceFailure("2590", e.getMessage());
 	    }
     	
     	return true;
@@ -184,7 +180,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		        log.debug("Removed member: " + subject.getValue() + " from group: " + groupName.getValue() );
 	        }
 	    } catch (Exception e) {
-	        throw new ServiceFailure(null, e.getMessage());
+	        throw new ServiceFailure("2690", e.getMessage());
 	    }
 		
 		return true;
@@ -223,8 +219,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	        }
 	        
 		} catch (Exception e) {
-			log.error("Could not map identity", e);
-	        return false;
+	    	throw new ServiceFailure("2390", "Could not map identity: " + e.getMessage());
 	    }		
 		
 		return true;
@@ -274,8 +269,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		    }
 		    
 		} catch (Exception e) {
-			log.error("Could not map identity", e);
-		    return false;
+	    	throw new ServiceFailure("2390", "Could not confirm identity mapping: " + e.getMessage());
 		}		
 		
 		return true;
@@ -327,7 +321,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		    ctx.modifyAttributes(dn, mods);
 		    log.debug( "Updated entry: " + subject.getValue() );
 		} catch (Exception e) {
-		    throw new ServiceFailure(null, e.getMessage());
+		    throw new ServiceFailure("4530", "Could not update account: " + e.getMessage());
 		}		
 		
 		return subject;
@@ -351,14 +345,15 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	        ctx.modifyAttributes(subject.getValue(), mods);
 	        log.debug( "Verified subject: " + subject.getValue() );
 	    } catch (NamingException e) {
-	        throw new ServiceFailure(null, e.getMessage());
+	        throw new ServiceFailure("4540", "Could not verify account: " + e.getMessage());
 	    }		
 		
 		return true;
 	}
 
 	@Override
-	public Subject registerAccount(Session session, Person p) {
+	public Subject registerAccount(Session session, Person p) throws ServiceFailure, IdentifierNotUnique, InvalidCredentials, 
+    NotImplemented, InvalidRequest {
 	    // Values we'll use in creating the entry
 	    Attribute objClasses = new BasicAttribute("objectclass");
 	    objClasses.add("top");
@@ -413,12 +408,12 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	        ctx.createSubcontext(dn, orig);
 	        log.debug( "Added entry " + dn);
 	    } catch (NameAlreadyBoundException e) {
-	        // If entry exists already, fine.  Ignore this error. 
-	    	log.warn("Entry " + dn + " already exists, no need to add", e);
-	        //return false;
+	    	String msg = "Entry " + dn + " already exists";
+	        // If entry exists already
+	    	log.warn(msg, e);
+	        throw new IdentifierNotUnique("4521", msg);
 	    } catch (NamingException e) {
-	    	log.error("Problem adding entry: " + dn, e);
-	        return null;
+	    	throw new ServiceFailure("4520", "Could not register account: " + e.getMessage());
 	    }
 		return subject;
 	}
@@ -435,7 +430,9 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 			pList = processAttributes(dn, attributes);
 			log.debug("Retrieved SubjectList for: " + dn);
 		} catch (Exception e) {
-	    	log.error("Problem looking up entry: " + dn, e);
+			String msg = "Problem looking up entry: " + dn + " : " + e.getMessage();
+	    	log.error(msg, e);
+	    	throw new ServiceFailure("4561", msg);
 		}
 		
 		return pList;
@@ -477,131 +474,131 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
                 }
 	        }
 	        
-	    } catch (NamingException e) {
-	    	log.error("Problem listing entries at base: " + base, e);
+	    } catch (Exception e) {
+	    	String msg = "Problem listing entries at base: " + base + " : " + e.getMessage();
+	    	log.error(msg, e);
+	    	throw new ServiceFailure("2290", msg);
 	    }
 	    
 	    return pList;
 	}
 	
-	private SubjectList processAttributes(String name, Attributes attributes) {
+	private SubjectList processAttributes(String name, Attributes attributes) throws Exception {
 		
 		SubjectList pList = new SubjectList();
 
-		try {
-			if (attributes != null) {
-				NamingEnumeration<String> objectClasses = (NamingEnumeration<String>) attributes.get("objectClass").getAll();
-				boolean isGroup = true;
-				while (objectClasses.hasMore()) {
-					String objectClass = objectClasses.next();
-					if (objectClass.equalsIgnoreCase("d1Principal")) {
-						isGroup = false;
-						break;
+		
+		if (attributes != null) {
+			NamingEnumeration<String> objectClasses = (NamingEnumeration<String>) attributes.get("objectClass").getAll();
+			boolean isGroup = true;
+			while (objectClasses.hasMore()) {
+				String objectClass = objectClasses.next();
+				if (objectClass.equalsIgnoreCase("d1Principal")) {
+					isGroup = false;
+					break;
+				}
+			}
+			
+			// get all attributes for processing
+			NamingEnumeration<? extends Attribute> values = attributes.getAll();
+			// for handling multi-item attributes
+			NamingEnumeration<String> items = null;
+			
+			// process as Group
+			if (isGroup) {
+				Group group = new Group();
+				Subject subject = new Subject();
+				subject.setValue(name);
+				group.setSubject(subject);
+				
+				while (values.hasMore()) {
+					Attribute attribute = values.next();
+					String attributeName = attribute.getID();
+					String attributeValue = null;
+
+					if (attributeName.equalsIgnoreCase("cn")) {
+						attributeValue = (String) attribute.get();
+						group.setGroupName(attributeValue);
+						log.debug("Found attribute: " + attributeName + "=" + attributeValue);
+					}
+					if (attributeName.equalsIgnoreCase("uniqueMember")) {
+						items = (NamingEnumeration<String>) attribute.getAll();
+						while (items.hasMore()) {
+							attributeValue = items.next();
+							Subject member = new Subject();
+							member.setValue(attributeValue);
+							group.addHasMember(member);
+							log.debug("Found attribute: " + attributeName + "=" + attributeValue);
+						}
 					}
 				}
+				pList.addGroup(group);
 				
-				// get all attributes for processing
-				NamingEnumeration<? extends Attribute> values = attributes.getAll();
-				// for handling multi-item attributes
-				NamingEnumeration<String> items = null;
+			} else {
+				// process as a person
+				Person person = new Person();
+				Subject subject = new Subject();
+				subject.setValue(name);
+				person.setSubject(subject);
 				
-				// process as Group
-				if (isGroup) {
-					Group group = new Group();
-					Subject subject = new Subject();
-					subject.setValue(name);
-					group.setSubject(subject);
-					
-					while (values.hasMore()) {
-						Attribute attribute = values.next();
-						String attributeName = attribute.getID();
-						String attributeValue = null;
+				while (values.hasMore()) {
+					Attribute attribute = values.next();
+					String attributeName = attribute.getID();
+					String attributeValue = null;
 
-						if (attributeName.equalsIgnoreCase("cn")) {
-							attributeValue = (String) attribute.get();
-							group.setGroupName(attributeValue);
+					if (attributeName.equalsIgnoreCase("cn")) {
+						attributeValue = (String) attribute.get();
+						log.debug("Found attribute: " + attributeName + "=" + attributeValue);
+					}
+					if (attributeName.equalsIgnoreCase("sn")) {
+						attributeValue = (String) attribute.get();
+						person.setFamilyName(attributeValue);
+						log.debug("Found attribute: " + attributeName + "=" + attributeValue);
+					}
+					if (attributeName.equalsIgnoreCase("mail")) {
+						items = (NamingEnumeration<String>) attribute.getAll();
+						while (items.hasMore()) {
+							attributeValue = items.next();
+							person.addEmail(attributeValue);
 							log.debug("Found attribute: " + attributeName + "=" + attributeValue);
-						}
-						if (attributeName.equalsIgnoreCase("uniqueMember")) {
-							items = (NamingEnumeration<String>) attribute.getAll();
-							while (items.hasMore()) {
-								attributeValue = items.next();
-								Subject member = new Subject();
-								member.setValue(attributeValue);
-								group.addHasMember(member);
-								log.debug("Found attribute: " + attributeName + "=" + attributeValue);
-							}
 						}
 					}
-					pList.addGroup(group);
-					
-				} else {
-					// process as a person
-					Person person = new Person();
-					Subject subject = new Subject();
-					subject.setValue(name);
-					person.setSubject(subject);
-					
-					while (values.hasMore()) {
-						Attribute attribute = values.next();
-						String attributeName = attribute.getID();
-						String attributeValue = null;
-
-						if (attributeName.equalsIgnoreCase("cn")) {
-							attributeValue = (String) attribute.get();
+					if (attributeName.equalsIgnoreCase("givenName")) {
+						items = (NamingEnumeration<String>) attribute.getAll();
+						while (items.hasMore()) {
+							attributeValue = items.next();
+							person.addGivenName(attributeValue);
 							log.debug("Found attribute: " + attributeName + "=" + attributeValue);
-						}
-						if (attributeName.equalsIgnoreCase("sn")) {
-							attributeValue = (String) attribute.get();
-							person.setFamilyName(attributeValue);
-							log.debug("Found attribute: " + attributeName + "=" + attributeValue);
-						}
-						if (attributeName.equalsIgnoreCase("mail")) {
-							items = (NamingEnumeration<String>) attribute.getAll();
-							while (items.hasMore()) {
-								attributeValue = items.next();
-								person.addEmail(attributeValue);
-								log.debug("Found attribute: " + attributeName + "=" + attributeValue);
-							}
-						}
-						if (attributeName.equalsIgnoreCase("givenName")) {
-							items = (NamingEnumeration<String>) attribute.getAll();
-							while (items.hasMore()) {
-								attributeValue = items.next();
-								person.addGivenName(attributeValue);
-								log.debug("Found attribute: " + attributeName + "=" + attributeValue);
-							}
-						}
-						if (attributeName.equalsIgnoreCase("equivalentIdentity")) {
-							items = (NamingEnumeration<String>) attribute.getAll();
-							while (items.hasMore()) {
-								attributeValue = items.next();
-								Subject equivalentIdentity = new Subject();
-								equivalentIdentity.setValue(attributeValue);
-								person.addEquivalentIdentity(equivalentIdentity);
-								log.debug("Found attribute: " + attributeName + "=" + attributeValue);
-							}
-						}
-						// TODO: store in person, or only in group entry?
-						if (attributeName.equalsIgnoreCase("memberOf")) {
-							items = (NamingEnumeration<String>) attribute.getAll();
-							while (items.hasMore()) {
-								attributeValue = items.next();
-								Subject group = new Subject();
-								group.setValue(attributeValue);
-								person.addIsMemberOf(group);
-								log.debug("Found attribute: " + attributeName + "=" + attributeValue);
-							}
 						}
 					}
-					// TODO: handle group membership here?
-					
-					pList.addPerson(person);
-				}			
-			}
-		} catch (Exception e) {
-	    	log.error("Problem processing attributes", e);
+					if (attributeName.equalsIgnoreCase("equivalentIdentity")) {
+						items = (NamingEnumeration<String>) attribute.getAll();
+						while (items.hasMore()) {
+							attributeValue = items.next();
+							Subject equivalentIdentity = new Subject();
+							equivalentIdentity.setValue(attributeValue);
+							person.addEquivalentIdentity(equivalentIdentity);
+							log.debug("Found attribute: " + attributeName + "=" + attributeValue);
+						}
+					}
+					// TODO: store in person, or only in group entry?
+					if (attributeName.equalsIgnoreCase("memberOf")) {
+						items = (NamingEnumeration<String>) attribute.getAll();
+						while (items.hasMore()) {
+							attributeValue = items.next();
+							Subject group = new Subject();
+							group.setValue(attributeValue);
+							person.addIsMemberOf(group);
+							log.debug("Found attribute: " + attributeName + "=" + attributeValue);
+						}
+					}
+				}
+				// TODO: handle group membership here?
+				
+				pList.addPerson(person);
+			}			
 		}
+
 		return pList;
 	}
 	
@@ -614,7 +611,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 			
 			Subject p = new Subject();
 //			p.setValue("cn=testGroup,dc=dataone,dc=org");
-			p.setValue("cn=test1,dc=dataone,dc=org");
+			p.setValue("cn=testGroup,dc=dataone,dc=org");
 		
 			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
 //			identityService.setServer("ldap://bespin.nceas.ucsb.edu:389");
