@@ -417,8 +417,8 @@ public class CNIdentityLDAPImplTest {
 			//clean up
 			check = identityService.removeSubject(p);
 			assertTrue(check);
-//			check = identityService.removeSubject(groupSubject);
-//			assertTrue(check);
+			check = identityService.removeSubject(groupSubject);
+			assertTrue(check);
 	
 		} catch (Exception e) {
 			e.printStackTrace();
