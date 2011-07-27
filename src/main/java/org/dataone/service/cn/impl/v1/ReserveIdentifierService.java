@@ -1,4 +1,4 @@
-package org.dataone.service.cn;
+package org.dataone.service.cn.impl.v1;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -27,31 +27,30 @@ import org.dataone.service.exceptions.IdentifierNotUnique;
 import org.dataone.service.exceptions.NotAuthorized;
 import org.dataone.service.exceptions.NotFound;
 import org.dataone.service.ldap.LDAPService;
-import org.dataone.service.types.Identifier;
-import org.dataone.service.types.Session;
-import org.dataone.service.types.Subject;
+import org.dataone.service.types.v1.Identifier;
+import org.dataone.service.types.v1.Session;
+import org.dataone.service.types.v1.Subject;
 
 /**
  * Class used for adding and managing reserved Identifiers
  * Identifiers are housed in LDAP and replicated across CNs
- * 
+ *
  * @author leinfelder
  *
  */
-@Deprecated
 public class ReserveIdentifierService extends LDAPService {
 
 	public static Log log = LogFactory.getLog(ReserveIdentifierService.class);
-	
+
 	private static SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMddHHmmss'Z'");
-	
+
 	private static Timer timer = null;
-	
+
 	public ReserveIdentifierService() {
 		// we need to use a different base for the ids
 		this.base = Settings.getConfiguration().getString("reserveIdentifier.ldap.base");
 	}
-	
+
 	/**
 	 * Reserves the given Identifier for the Subject in the Session
 	 * Checks ownership of the pid by the subject if it already exists
@@ -62,9 +61,9 @@ public class ReserveIdentifierService extends LDAPService {
 	 * @throws IdentifierNotUnique
 	 */
 	public Identifier reserveIdentifier(Session session, Identifier pid, String scope, String format) throws IdentifierNotUnique {
-		
+
 		// TODO: construct pid from scope+format+calling some service
-		
+
 		Subject subject = session.getSubject();
 		boolean ownedBySubject = false;
 
@@ -80,23 +79,23 @@ public class ReserveIdentifierService extends LDAPService {
 			}
 			// TODO: update the date of the reservation?
 		}
-		
+
 		// add an entry for the subject and pid
 		boolean result = addEntry(subject, pid);
-		
+
 		return pid;
 	}
-	
+
 	/**
-	 * 
+	 *
 	 * @param session
 	 * @param pid
 	 * @return
 	 * @throws NotAuthorized
-	 * @throws NotFound 
+	 * @throws NotFound
 	 */
 	public boolean removeReservation(Session session, Identifier pid) throws NotAuthorized, NotFound {
-		
+
 		// check that we have the reservation
 		if (hasReservation(session, pid)) {
 			// look up the dn to remove it
@@ -106,17 +105,17 @@ public class ReserveIdentifierService extends LDAPService {
 				return result;
 			}
 		}
-		
+
 		return false;
 	}
-	
+
 	public boolean hasReservation(Session session, Identifier pid) throws NotAuthorized, NotFound {
 		Subject subject = session.getSubject();
 		boolean ownedBySubject = false;
 
 		// look up the identifier
 		String dn = lookupDN(pid);
-		
+
 		if (dn == null) {
 			String msg = "No reservation found for pid: " + pid.getValue();
 			throw new NotFound("0000", msg);
@@ -128,11 +127,11 @@ public class ReserveIdentifierService extends LDAPService {
 				throw new NotAuthorized("0000", msg);
 			}
 		}
-		
+
 		// we got this far, it is ours
 		return true;
 	}
-	
+
 	/**
 	 * Adds the entry to the LDAP store
 	 * @param subject
@@ -145,18 +144,18 @@ public class ReserveIdentifierService extends LDAPService {
 	    Attribute objClasses = new BasicAttribute("objectclass");
 	    //objClasses.add("top");
 	    objClasses.add("d1Reservation");
-	    
+
 	    // construct a DN from time
 	    Calendar now = Calendar.getInstance();
 	    String reservationId = "reservedIdentifier." + now.getTimeInMillis();
 	    String dn = "reservationId=" + reservationId + "," + base;
 	    String created = dateFormat.format(now.getTime());
-	    
+
 	    Attribute idAttribute = new BasicAttribute("reservationId", reservationId);
 	    Attribute subjectAttribute = new BasicAttribute("subject", subject.getValue());
 	    Attribute identifierAttribute = new BasicAttribute("identifier", pid.getValue());
 	    Attribute createdAttribute = new BasicAttribute("created", created);
-	    
+
 	    try {
 		    DirContext ctx = getContext();
 	        Attributes orig = new BasicAttributes();
@@ -181,12 +180,12 @@ public class ReserveIdentifierService extends LDAPService {
 	    }
 		return true;
 	}
-	
+
 	/**
 	 * Searches for all reservedIdentifiers and removes those which are older than
 	 * the numberOfDays specified
 	 * @param numberOfDays
-	 * @throws NamingException 
+	 * @throws NamingException
 	 */
 	public void expireEntries(int numberOfDays) throws NamingException {
 		List<Identifier> identifiers = lookupReservedIdentifiers();
@@ -212,9 +211,9 @@ public class ReserveIdentifierService extends LDAPService {
 				removeEntry(dn);
 			}
 		}
-		
+
 	}
-	
+
 	/**
 	 * Initializes the timer to run expiration checking every hour
 	 * for the given service. All previously scheduled tasks are cancelled
@@ -239,32 +238,32 @@ public class ReserveIdentifierService extends LDAPService {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
-			}			
-		};	
+			}
+		};
 		// run expiration every hour
 		long period = 1000 * 60 * 60 * 1;
 		timer.scheduleAtFixedRate(task, Calendar.getInstance().getTime(), period);
 	}
-	
+
 	/**
 	 * Find all the reserved Identifiers
 	 * @return list of previously reserved Identifiers
 	 */
 	private List<Identifier> lookupReservedIdentifiers() {
-		
+
 		List<Identifier> identifiers = new ArrayList<Identifier>();
 
 		try {
 			DirContext ctx = getContext();
 			SearchControls ctls = new SearchControls();
 		    ctls.setSearchScope(SearchControls.SUBTREE_SCOPE);
-		    
+
 		    // search for all reservations
 		    String searchCriteria = "(objectClass=d1Reservation)";
-		    
-	        NamingEnumeration<SearchResult> results = 
+
+	        NamingEnumeration<SearchResult> results =
 	            ctx.search(base, searchCriteria, ctls);
-	        
+
 	        while (results != null && results.hasMore()) {
 	            SearchResult si = results.next();
 	            String dn = si.getNameInNamespace();
@@ -285,30 +284,30 @@ public class ReserveIdentifierService extends LDAPService {
 		} catch (Exception e) {
 			log.error("problem looking up identifiers", e);
 		}
-		
+
 		return identifiers;
 	}
-	
+
 	/**
 	 * Find the DN for a given Identifier
 	 * @param pid
 	 * @return the DN in LDAP for the given pid
 	 */
 	private String lookupDN(Identifier pid) {
-		
+
         String dn = null;
 
 		try {
 			DirContext ctx = getContext();
 			SearchControls ctls = new SearchControls();
 		    ctls.setSearchScope(SearchControls.SUBTREE_SCOPE);
-		    
+
 		    // search for the given pid
 		    String searchCriteria = "(&(objectClass=d1Reservation)(identifier=" + pid.getValue() + "))";
-		    
-	        NamingEnumeration<SearchResult> results = 
+
+	        NamingEnumeration<SearchResult> results =
 	            ctx.search(base, searchCriteria, ctls);
-	        
+
 	        while (results != null && results.hasMore()) {
 	            SearchResult si = results.next();
 	            dn = si.getNameInNamespace();
@@ -333,5 +332,5 @@ public class ReserveIdentifierService extends LDAPService {
 		}
 		return dn;
 	}
-	
+
 }
