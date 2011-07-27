@@ -1,4 +1,4 @@
-package org.dataone.service.cn.impl;
+package org.dataone.service.cn.impl.v1;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,7 +17,7 @@ import javax.naming.directory.SearchResult;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.dataone.service.cn.CNIdentity;
+import org.dataone.service.cn.v1.CNIdentity;
 import org.dataone.service.exceptions.IdentifierNotUnique;
 import org.dataone.service.exceptions.InvalidCredentials;
 import org.dataone.service.exceptions.InvalidRequest;
@@ -27,39 +27,38 @@ import org.dataone.service.exceptions.NotFound;
 import org.dataone.service.exceptions.NotImplemented;
 import org.dataone.service.exceptions.ServiceFailure;
 import org.dataone.service.ldap.LDAPService;
-import org.dataone.service.types.Group;
-import org.dataone.service.types.Person;
-import org.dataone.service.types.Session;
-import org.dataone.service.types.Subject;
-import org.dataone.service.types.SubjectList;
+import org.dataone.service.types.v1.Group;
+import org.dataone.service.types.v1.Person;
+import org.dataone.service.types.v1.Session;
+import org.dataone.service.types.v1.Subject;
+import org.dataone.service.types.v1.SubjectList;
 
 
 /**
  * Proposed LDAP schema extensions
- * 
+ *
  * objectClass: d1Principal
  * attributes:
  * 		equivalentIdentity (0...n) - used when mapping is confirmed
  * 		equivalentIdentityRequest (0...n) - used when mapping is requested (before confirmation)
  * 		isVerified (1...1) - used when untrusted account is registered
- * 
+ *
  * objectClass: d1Group
  * attributes:
- * 		adminIdentity (0...n) - references other Principals that are allowed to modify the group 
- * 
+ * 		adminIdentity (0...n) - references other Principals that are allowed to modify the group
+ *
  * @author leinfelder
  *
  */
-@Deprecated
 public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
-	
+
 	public static Log log = LogFactory.getLog(CNIdentityLDAPImpl.class);
 
 	@Override
 	public Subject createGroup(Session session, Subject groupName) throws ServiceFailure,
 			InvalidToken, NotAuthorized, NotFound, NotImplemented,
 			InvalidRequest, IdentifierNotUnique {
-		
+
 		/* objectClass groupOfUniqueNames....
 		 * MUST ( uniqueMember $ cn )
 		 * MAY ( businessCategory $ seeAlso $ owner $ ou $ o $ description ) )
@@ -77,7 +76,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 
 	    // the DN for the group
 	    String dn = groupName.getValue();
-	   
+
 	    try {
 		    DirContext ctx = getContext();
 	        Attributes orig = new BasicAttributes();
@@ -96,26 +95,26 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	    } catch (NamingException e) {
 	    	throw new ServiceFailure("2490", "Could not create group: " + e.getMessage());
 	    }
-	    
+
 		return groupName;
 	}
-	
+
 	@Override
-    public boolean addGroupMembers(Session session, Subject groupName, SubjectList members) 
+    public boolean addGroupMembers(Session session, Subject groupName, SubjectList members)
     	throws ServiceFailure, InvalidToken, NotAuthorized, NotFound, NotImplemented, InvalidRequest {
-    	
+
     	try {
-	        
+
 	        // check that they have admin rights for group
 	        Subject user = session.getSubject();
 	        boolean canEdit = this.checkAttribute(groupName.getValue(), "owner", user.getValue());
 	        if (!canEdit) {
 	        	throw new NotAuthorized(null, "Subject not in owner list: " + user.getValue());
 	        }
-	        
+
 	        // context
 	        DirContext ctx = getContext();
-	        
+
 	        // collect all the subjects from groups and people
 	        List<Subject> subjects = new ArrayList<Subject>();
 	        for (Group group: members.getGroupList()) {
@@ -142,27 +141,27 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	    } catch (Exception e) {
 	        throw new ServiceFailure("2590", e.getMessage());
 	    }
-    	
+
     	return true;
-    	
+
     }
-    
+
 	@Override
-    public boolean removeGroupMembers(Session session, Subject groupName, SubjectList members) 
+    public boolean removeGroupMembers(Session session, Subject groupName, SubjectList members)
 		throws ServiceFailure, InvalidToken, NotAuthorized, NotFound, NotImplemented, InvalidRequest {
-		
+
 		try {
-	        
+
 	        // check that they have admin rights for group
 	        Subject user = session.getSubject();
 	        boolean canEdit = this.checkAttribute(groupName.getValue(), "owner", user.getValue());
 	        if (!canEdit) {
 	        	throw new NotAuthorized(null, "Subject not in owner list: " + user.getValue());
 	        }
-	        
+
 	        // context
 	        DirContext ctx = getContext();
-	        
+
 	        //collect all the subjects from groups and people
 	        List<Subject> subjects = new ArrayList<Subject>();
 	        for (Group group: members.getGroupList()) {
@@ -171,7 +170,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	        for (Person person: members.getPersonList()) {
 	        	subjects.add(person.getSubject());
 	        }
-	        for (Subject subject: subjects) {	        	
+	        for (Subject subject: subjects) {
 		        // remove them as a member
 		        ModificationItem[] mods = new ModificationItem[1];
 		        Attribute mod0 = new BasicAttribute("uniqueMember", subject.getValue());
@@ -183,9 +182,9 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	    } catch (Exception e) {
 	        throw new ServiceFailure("2690", e.getMessage());
 	    }
-		
+
 		return true;
-		
+
 	}
 
     @Override
@@ -196,14 +195,14 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		try {
 			// primary subject in the session
 			Subject primarySubject = session.getSubject();
-			
+
 	        // get the context
 	        DirContext ctx = getContext();
-	        
+
 	        // check if primary is confirming secondary
-	        boolean confirmationRequest = 
+	        boolean confirmationRequest =
 	        	checkAttribute(primarySubject.getValue(), "equivalentIdentityRequest", secondarySubject.getValue());
-	        
+
 	        ModificationItem[] mods = null;
 	        Attribute mod0 = null;
 	        if (confirmationRequest) {
@@ -218,30 +217,30 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		        ctx.modifyAttributes(secondarySubject.getValue(), mods);
 		        log.debug("Successfully set equivalentIdentityRequest on: " + secondarySubject.getValue() + " for " + primarySubject.getValue());
 	        }
-	        
+
 		} catch (Exception e) {
 	    	throw new ServiceFailure("2390", "Could not map identity: " + e.getMessage());
-	    }		
-		
+	    }
+
 		return true;
 	}
-	
+
 	@Override
 	public boolean confirmMapIdentity(Session session, Subject secondarySubject)
 			throws ServiceFailure, InvalidToken, NotAuthorized, NotFound,
 			NotImplemented, InvalidRequest {
-		
+
 		try {
 			// primary subject in the session
 			Subject primarySubject = session.getSubject();
-			
+
 		    // get the context
 		    DirContext ctx = getContext();
-		    
+
 		    // check if primary is confirming secondary
-		    boolean confirmationRequest = 
+		    boolean confirmationRequest =
 		    	checkAttribute(primarySubject.getValue(), "equivalentIdentityRequest", secondarySubject.getValue());
-		    
+
 		    ModificationItem[] mods = null;
 		    Attribute mod0 = null;
 		    if (confirmationRequest) {
@@ -255,7 +254,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		        // make the change
 		        ctx.modifyAttributes(primarySubject.getValue(), mods);
 		        log.debug("Successfully set equivalentIdentity: " + primarySubject.getValue() + " = " + secondarySubject.getValue());
-		    
+
 		        // update attribute on secondarySubject
 		        mods = new ModificationItem[1];
 		        mod0 = new BasicAttribute("equivalentIdentity", primarySubject.getValue());
@@ -268,29 +267,29 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		        log.error("There is no identity mapping request to confim on: " + secondarySubject.getValue() + " for " + primarySubject.getValue());
 		        return false;
 		    }
-		    
+
 		} catch (Exception e) {
 	    	throw new ServiceFailure("2390", "Could not confirm identity mapping: " + e.getMessage());
-		}		
-		
+		}
+
 		return true;
 	}
-	
+
 	@Override
-	public Subject updateAccount(Session session, Person p) throws ServiceFailure, 
+	public Subject updateAccount(Session session, Person p) throws ServiceFailure,
 		IdentifierNotUnique, InvalidCredentials, NotImplemented, InvalidRequest {
-		
+
 		Subject subject = p.getSubject();
 
 		try {
 			// the DN
 			String dn = subject.getValue();
-			
+
 			// either it's in the dn, or we should construct it
 		    String commonName = parseAttribute(dn, "cn");
 		    if (commonName == null) {
 			    if (p.getGivenNameList() != null && !p.getGivenNameList().isEmpty()) {
-			    	commonName += p.getGivenName(0) + " "; 
+			    	commonName += p.getGivenName(0) + " ";
 			    }
 			    commonName += p.getFamilyName();
 		    }
@@ -306,54 +305,54 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		    }
 		    // Update isVerified attribute to false again
 		    Attribute isVerified = new BasicAttribute("isVerified", Boolean.FALSE.toString().toUpperCase());
-			
+
 		    // get a handle to an Initial DirContext
 		    DirContext ctx = getContext();
-		    
-		    // construct the list of modifications to make 
+
+		    // construct the list of modifications to make
 		    ModificationItem[] mods = new ModificationItem[5];
 		    mods[0] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, cn);
 		    mods[1] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, sn);
 		    mods[2] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, givenNames);
 		    mods[3] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, mail);
 		    mods[4] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, isVerified);
-		    
-		    // make the change 
+
+		    // make the change
 		    ctx.modifyAttributes(dn, mods);
 		    log.debug( "Updated entry: " + subject.getValue() );
 		} catch (Exception e) {
 		    throw new ServiceFailure("4530", "Could not update account: " + e.getMessage());
-		}		
-		
+		}
+
 		return subject;
 	}
 
 	@Override
 	public boolean verifyAccount(Session session, Subject subject) throws ServiceFailure,
 			NotAuthorized, NotImplemented, InvalidToken, InvalidRequest {
-		
+
 	    try {
 	        /* get a handle to an Initial DirContext */
 	        DirContext ctx = getContext();
-	        
+
 	        /* construct the list of modifications to make */
 	        ModificationItem[] mods = new ModificationItem[1];
 	        // Update isVerified attribute
 		    Attribute isVerified = new BasicAttribute("isVerified", Boolean.TRUE.toString().toUpperCase());
 	        mods[0] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, isVerified);
-	        
+
 	        /* make the change */
 	        ctx.modifyAttributes(subject.getValue(), mods);
 	        log.debug( "Verified subject: " + subject.getValue() );
 	    } catch (NamingException e) {
 	        throw new ServiceFailure("4540", "Could not verify account: " + e.getMessage());
-	    }		
-		
+	    }
+
 		return true;
 	}
 
 	@Override
-	public Subject registerAccount(Session session, Person p) throws ServiceFailure, IdentifierNotUnique, InvalidCredentials, 
+	public Subject registerAccount(Session session, Person p) throws ServiceFailure, IdentifierNotUnique, InvalidCredentials,
     NotImplemented, InvalidRequest {
 	    // Values we'll use in creating the entry
 	    Attribute objClasses = new BasicAttribute("objectclass");
@@ -362,11 +361,11 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	    objClasses.add("organizationalPerson");
 	    objClasses.add("inetOrgPerson");
 	    objClasses.add("d1Principal");
-	    
+
 	    // get the DN
 	    Subject subject = p.getSubject();
 	    String dn = subject.getValue();
-	    
+
 	    // construct the tree as needed
 	    try {
 			constructTree(dn);
@@ -374,16 +373,16 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 			e.printStackTrace();
 	    	throw new ServiceFailure("4520", "Could not counstruct partial tree: " + e.getMessage());
 		}
-	    
+
 	    // either it's in the dn, or we should construct it
 	    String commonName = parseAttribute(dn, "cn");
 	    if (commonName == null) {
 		    if (p.getGivenNameList() != null && !p.getGivenNameList().isEmpty()) {
-		    	commonName += p.getGivenName(0) + " "; 
+		    	commonName += p.getGivenName(0) + " ";
 		    }
 		    commonName += p.getFamilyName();
 	    }
-	    
+
 	    Attribute cn = new BasicAttribute("cn", commonName);
 	    Attribute sn = new BasicAttribute("sn", p.getFamilyName());
 	    Attribute givenNames = new BasicAttribute("givenName");
@@ -426,7 +425,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	    }
 		return subject;
 	}
-	
+
 	@Override
 	public SubjectList getSubjectInfo(Session session, Subject subject)
     	throws ServiceFailure, InvalidRequest, NotAuthorized, NotImplemented {
@@ -443,14 +442,14 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	    	log.error(msg, e);
 	    	throw new ServiceFailure("4561", msg);
 		}
-		
+
 		return pList;
 	}
-	
+
 	// TODO: use query and start/count params
 	@Override
-	public SubjectList listSubjects(Session session, String query, Integer start, 
-	        Integer count) throws ServiceFailure, InvalidToken, NotAuthorized, 
+	public SubjectList listSubjects(Session session, String query, Integer start,
+	        Integer count) throws ServiceFailure, InvalidToken, NotAuthorized,
 	        NotImplemented {
 
 		SubjectList pList = new SubjectList();
@@ -458,13 +457,13 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 			DirContext ctx = getContext();
 			SearchControls ctls = new SearchControls();
 		    ctls.setSearchScope(SearchControls.SUBTREE_SCOPE);
-		    
+
 		    // search for principals and groups
 		    String searchCriteria = "(|(objectClass=d1Principal)(objectClass=groupOfUniqueNames))";
-		    
-	        NamingEnumeration<SearchResult> results = 
+
+	        NamingEnumeration<SearchResult> results =
 	            ctx.search(base, searchCriteria, ctls);
-	        
+
 	        while (results != null && results.hasMore()) {
 	            SearchResult si = results.next();
 	            String dn = si.getNameInNamespace();
@@ -482,21 +481,21 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	                }
                 }
 	        }
-	        
+
 	    } catch (Exception e) {
 	    	String msg = "Problem listing entries at base: " + base + " : " + e.getMessage();
 	    	log.error(msg, e);
 	    	throw new ServiceFailure("2290", msg);
 	    }
-	    
+
 	    return pList;
 	}
-	
+
 	private SubjectList processAttributes(String name, Attributes attributes) throws Exception {
-		
+
 		SubjectList pList = new SubjectList();
 
-		
+
 		if (attributes != null) {
 			NamingEnumeration<String> objectClasses = (NamingEnumeration<String>) attributes.get("objectClass").getAll();
 			boolean isGroup = true;
@@ -507,19 +506,19 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 					break;
 				}
 			}
-			
+
 			// get all attributes for processing
 			NamingEnumeration<? extends Attribute> values = attributes.getAll();
 			// for handling multi-item attributes
 			NamingEnumeration<String> items = null;
-			
+
 			// process as Group
 			if (isGroup) {
 				Group group = new Group();
 				Subject subject = new Subject();
 				subject.setValue(name);
 				group.setSubject(subject);
-				
+
 				while (values.hasMore()) {
 					Attribute attribute = values.next();
 					String attributeName = attribute.getID();
@@ -542,14 +541,14 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 					}
 				}
 				pList.addGroup(group);
-				
+
 			} else {
 				// process as a person
 				Person person = new Person();
 				Subject subject = new Subject();
 				subject.setValue(name);
 				person.setSubject(subject);
-				
+
 				while (values.hasMore()) {
 					Attribute attribute = values.next();
 					String attributeName = attribute.getID();
@@ -603,29 +602,29 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 					}
 				}
 				// TODO: handle group membership here?
-				
+
 				pList.addPerson(person);
-			}			
+			}
 		}
 
 		return pList;
 	}
-	
+
 	public boolean removeSubject(Subject p) {
 		return super.removeEntry(p.getValue());
 	}
-	
+
 	public static void main(String[] args) {
 		try {
-			
+
 			Subject p = new Subject();
 //			p.setValue("cn=testGroup,dc=cilogon,dc=org");
 			p.setValue("cn=testGroup,dc=cilogon,dc=org");
-		
+
 			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
 //			identityService.setServer("ldap://bespin.nceas.ucsb.edu:389");
 			identityService.removeSubject(p);
-			
+
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
