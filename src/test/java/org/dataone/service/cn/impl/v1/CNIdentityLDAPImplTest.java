@@ -11,6 +11,7 @@ import org.dataone.service.types.v1.Person;
 import org.dataone.service.types.v1.Session;
 import org.dataone.service.types.v1.Subject;
 import org.dataone.service.types.v1.SubjectList;
+import org.junit.After;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -35,6 +36,32 @@ public class CNIdentityLDAPImplTest {
 		session.setSubject(subject);
 		return session;
 	}
+	
+	/**
+	 * Do our best to remove all the entries we may have inserted
+	 * If we don't remove test entries, the tests can fail the next time they are run
+	 */
+	@After
+	public void cleanUp() {
+		CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
+		identityService.setServer(server);
+		try {
+			identityService.removeEntry(primarySubject);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		try {
+			identityService.removeEntry(secondarySubject);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		try {
+			identityService.removeEntry(groupName);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
 
 	@Ignore
 	@Test
