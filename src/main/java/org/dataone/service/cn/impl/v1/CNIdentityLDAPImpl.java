@@ -17,6 +17,7 @@ import javax.naming.directory.SearchResult;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.dataone.service.util.Constants;
 import org.dataone.service.cn.v1.CNIdentity;
 import org.dataone.service.exceptions.IdentifierNotUnique;
 import org.dataone.service.exceptions.InvalidCredentials;
@@ -490,6 +491,28 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 
 	    return pList;
 	}
+	
+    @Override
+	public boolean isGroup(Session session, Subject subject) 
+	throws ServiceFailure, InvalidRequest, NotAuthorized, NotImplemented, NotFound {
+    	SubjectList subjectList = this.getSubjectInfo(session, subject);
+    	// we have a group
+    	if (subjectList.getGroupList() != null && subjectList.getGroupList().size() > 0) {
+    		// we have no people
+    		if (subjectList.getPersonList() == null || subjectList.getPersonList().size() == 0) {
+    			return true;
+    		}
+    	}
+    	
+    	return false;
+    	
+    }
+ 
+    @Override
+    public boolean isPublic(Session session, Subject subject) 
+    throws ServiceFailure, InvalidRequest, NotAuthorized, NotImplemented, NotFound {
+    	return subject.getValue().equals(Constants.PUBLIC_SUBJECT);
+    }
 
 	private SubjectList processAttributes(String name, Attributes attributes) throws Exception {
 
