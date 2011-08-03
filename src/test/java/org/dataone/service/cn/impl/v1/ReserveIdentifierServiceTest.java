@@ -60,12 +60,12 @@ public class ReserveIdentifierServiceTest {
 
 			Identifier retPid = null;
 			service.setServer(server);
-			retPid = service.reserveIdentifier(getSession(subject), pid, null, null);
+			retPid = service.reserveIdentifier(getSession(subject), pid);
 			assertNotNull(retPid);
 
 			// make sure that we get an error when attempting to reserve as  someone else
 			try {
-				retPid = service.reserveIdentifier(getSession(anotherSubject), pid, null, null);
+				retPid = service.reserveIdentifier(getSession(anotherSubject), pid);
 			} catch (IdentifierNotUnique inu) {
 				retPid = null;
 			}
