@@ -17,8 +17,10 @@ import javax.naming.directory.SearchResult;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.dataone.configuration.Settings;
 import org.dataone.service.util.Constants;
 import org.dataone.service.cn.v1.CNIdentity;
+import org.dataone.cn.ldap.LDAPService;
 import org.dataone.service.exceptions.IdentifierNotUnique;
 import org.dataone.service.exceptions.InvalidCredentials;
 import org.dataone.service.exceptions.InvalidRequest;
@@ -27,7 +29,6 @@ import org.dataone.service.exceptions.NotAuthorized;
 import org.dataone.service.exceptions.NotFound;
 import org.dataone.service.exceptions.NotImplemented;
 import org.dataone.service.exceptions.ServiceFailure;
-import org.dataone.service.ldap.LDAPService;
 import org.dataone.service.types.v1.Group;
 import org.dataone.service.types.v1.Person;
 import org.dataone.service.types.v1.Session;
@@ -55,7 +56,15 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 
 	public static Log log = LogFactory.getLog(CNIdentityLDAPImpl.class);
 
-	@Override
+
+	public CNIdentityLDAPImpl() {
+		// we need to use a different base for the ids
+		this.setBase(Settings.getConfiguration().getString("identity.ldap.base"));
+	}
+        @Override
+        public void setBase(String base) {
+            this.base = base;
+        }
 	public Subject createGroup(Session session, Subject groupName) throws ServiceFailure,
 			InvalidToken, NotAuthorized, NotFound, NotImplemented,
 			InvalidRequest, IdentifierNotUnique {

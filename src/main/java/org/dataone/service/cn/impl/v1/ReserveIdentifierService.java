@@ -26,10 +26,11 @@ import org.dataone.configuration.Settings;
 import org.dataone.service.exceptions.IdentifierNotUnique;
 import org.dataone.service.exceptions.NotAuthorized;
 import org.dataone.service.exceptions.NotFound;
-import org.dataone.service.ldap.LDAPService;
+
 import org.dataone.service.types.v1.Identifier;
 import org.dataone.service.types.v1.Session;
 import org.dataone.service.types.v1.Subject;
+import org.dataone.cn.ldap.LDAPService;
 
 /**
  * Class used for adding and managing reserved Identifiers
@@ -48,9 +49,12 @@ public class ReserveIdentifierService extends LDAPService {
 
 	public ReserveIdentifierService() {
 		// we need to use a different base for the ids
-		this.base = Settings.getConfiguration().getString("reserveIdentifier.ldap.base");
+		this.setBase(Settings.getConfiguration().getString("reserveIdentifier.ldap.base"));
 	}
-
+        @Override
+        public void setBase(String base) {
+            this.base = base;
+        }
 	/**
 	 * Reserves the given Identifier for the Subject in the Session
 	 * Checks ownership of the pid by the subject if it already exists
