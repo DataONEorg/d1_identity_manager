@@ -38,12 +38,6 @@
 		</dependency>
 		<dependency>
 			<groupId>org.dataone</groupId>
-			<artifactId>d1_common_java</artifactId>
-			<version>0.6.4-SNAPSHOT</version>
-			<type>jar</type>
-		</dependency>
-		<dependency>
-			<groupId>org.dataone</groupId>
 			<artifactId>d1_cn_common</artifactId>
 			<version>0.6.4-SNAPSHOT</version>
 			<type>jar</type>
