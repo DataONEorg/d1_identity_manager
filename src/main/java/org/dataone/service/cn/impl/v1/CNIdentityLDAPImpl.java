@@ -14,12 +14,14 @@ import javax.naming.directory.DirContext;
 import javax.naming.directory.ModificationItem;
 import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
+import javax.security.auth.x500.X500Principal;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.dataone.configuration.Settings;
 import org.dataone.service.util.Constants;
 import org.dataone.service.cn.v1.CNIdentity;
+import org.dataone.client.auth.CertificateManager;
 import org.dataone.cn.ldap.LDAPService;
 import org.dataone.service.exceptions.IdentifierNotUnique;
 import org.dataone.service.exceptions.InvalidCredentials;
@@ -468,8 +470,22 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 			SearchControls ctls = new SearchControls();
 		    ctls.setSearchScope(SearchControls.SUBTREE_SCOPE);
 
-		    // search for principals and groups
+		    // search for all principals and groups
 		    String searchCriteria = "(|(objectClass=d1Principal)(objectClass=groupOfUniqueNames))";
+		    
+		    // constrain to match query string if we have it
+		    if (query != null && query.length() > 0) {
+		    	String queryCriteria = 
+		    		"(|" +
+	    				"(dn=*" + query + "*)" +
+		    			"(cn=*" + query + "*)" +
+		    			"(sn=*" + query + "*)" +
+		    			"(givenName=*" + query + "*)" +
+		    			"(mail=*" + query + "*)" +
+		    		")";
+		    	// combine the query with the object class restiction 
+		    	searchCriteria = "(&" + queryCriteria + searchCriteria + ")";
+		    }
 
 	        NamingEnumeration<SearchResult> results =
 	            ctx.search(base, searchCriteria, ctls);
@@ -527,6 +543,8 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 
 		SubjectList pList = new SubjectList();
 
+		// convert to use the standardized string representation
+		name = CertificateManager.getInstance().standardizeDN(name);
 
 		if (attributes != null) {
 			NamingEnumeration<String> objectClasses = (NamingEnumeration<String>) attributes.get("objectClass").getAll();
@@ -651,11 +669,14 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 
 			Subject p = new Subject();
 //			p.setValue("cn=testGroup,dc=cilogon,dc=org");
-			p.setValue("cn=testGroup,dc=cilogon,dc=org");
+			p.setValue("CN=Benjamin Leinfelder A458,O=University of Chicago,C=US,DC=cilogon,DC=org");
 
 			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
-//			identityService.setServer("ldap://bespin.nceas.ucsb.edu:389");
-			identityService.removeSubject(p);
+			identityService.setServer("ldap://cn-dev.dataone.org:389");
+			//identityService.removeSubject(p);
+			SubjectList sl = identityService.getSubjectInfo(null, p);
+			String subjectDn = sl.getPerson(0).getSubject().getValue();
+			System.out.println(subjectDn);
 
 		} catch (Exception e) {
 			e.printStackTrace();
