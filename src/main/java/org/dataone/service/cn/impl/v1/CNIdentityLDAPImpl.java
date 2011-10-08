@@ -129,11 +129,15 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 
 	        // collect all the subjects from groups and people
 	        List<Subject> subjects = new ArrayList<Subject>();
-	        for (Group group: members.getGroupList()) {
-	        	subjects.add(group.getSubject());
+	        if (members.getGroupList() != null) {
+		        for (Group group: members.getGroupList()) {
+		        	subjects.add(group.getSubject());
+		        }
 	        }
-	        for (Person person: members.getPersonList()) {
-	        	subjects.add(person.getSubject());
+	        if (members.getPersonList() != null) {
+		        for (Person person: members.getPersonList()) {
+		        	subjects.add(person.getSubject());
+		        }
 	        }
 	        for (Subject subject: subjects) {
 		        // check that they are not already a member
@@ -151,7 +155,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		        log.debug("Added member: " + subject.getValue() + " to group: " + groupName.getValue() );
 	        }
 	    } catch (Exception e) {
-	        throw new ServiceFailure("2590", e.getMessage());
+	        throw new ServiceFailure("2590", "Could not add group members: " + e.getMessage());
 	    }
 
     	return true;
@@ -176,11 +180,15 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 
 	        //collect all the subjects from groups and people
 	        List<Subject> subjects = new ArrayList<Subject>();
-	        for (Group group: members.getGroupList()) {
-	        	subjects.add(group.getSubject());
+	        if (members.getGroupList() != null) {
+		        for (Group group: members.getGroupList()) {
+		        	subjects.add(group.getSubject());
+		        }
 	        }
-	        for (Person person: members.getPersonList()) {
-	        	subjects.add(person.getSubject());
+	        if (members.getPersonList() != null) {
+		        for (Person person: members.getPersonList()) {
+		        	subjects.add(person.getSubject());
+		        }
 	        }
 	        for (Subject subject: subjects) {
 		        // remove them as a member
@@ -192,7 +200,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		        log.debug("Removed member: " + subject.getValue() + " from group: " + groupName.getValue() );
 	        }
 	    } catch (Exception e) {
-	        throw new ServiceFailure("2690", e.getMessage());
+	        throw new ServiceFailure("2690", "Could not remove group members: " + e.getMessage());
 	    }
 
 		return true;
