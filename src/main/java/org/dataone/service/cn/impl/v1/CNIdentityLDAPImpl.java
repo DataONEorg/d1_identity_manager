@@ -444,13 +444,18 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	@Override
 	public SubjectInfo getSubjectInfo(Session session, Subject subject)
     	throws ServiceFailure, InvalidRequest, NotAuthorized, NotImplemented {
+		return getSubjectInfo(session, subject, true);
+	}
+	
+	private SubjectInfo getSubjectInfo(Session session, Subject subject, boolean recurse)
+    	throws ServiceFailure, InvalidRequest, NotAuthorized, NotImplemented {
 
-		SubjectInfo pList = new SubjectInfo();
+		SubjectInfo subjectInfo = new SubjectInfo();
 	    String dn = subject.getValue();
 		try {
 			DirContext ctx = getContext();
 			Attributes attributes = ctx.getAttributes(dn);
-			pList = processAttributes(dn, attributes);
+			subjectInfo = processAttributes(dn, attributes, recurse);
 			log.debug("Retrieved SubjectList for: " + dn);
 		} catch (Exception e) {
 			String msg = "Problem looking up entry: " + dn + " : " + e.getMessage();
@@ -458,7 +463,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	    	throw new ServiceFailure("4561", msg);
 		}
 
-		return pList;
+		return subjectInfo;
 	}
 
 	// TODO: use query and start/count params
@@ -486,7 +491,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		    			"(givenName=*" + query + "*)" +
 		    			"(mail=*" + query + "*)" +
 		    		")";
-		    	// combine the query with the object class restiction 
+		    	// combine the query with the object class restriction 
 		    	searchCriteria = "(&" + queryCriteria + searchCriteria + ")";
 		    }
 
@@ -498,7 +503,8 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	            String dn = si.getNameInNamespace();
 	            log.debug("Search result found for: " + dn);
 	            Attributes attrs = si.getAttributes();
-	            SubjectInfo resultList = processAttributes(dn, attrs);
+	            // DO NOT look up other details about matching Groups or Persons
+	            SubjectInfo resultList = processAttributes(dn, attrs, false);
                 if (resultList != null) {
                 	// add groups
 	                for (Group group: resultList.getGroupList()) {
@@ -542,7 +548,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
     	return subject.getValue().equals(Constants.SUBJECT_PUBLIC);
     }
 
-	private SubjectInfo processAttributes(String name, Attributes attributes) throws Exception {
+	private SubjectInfo processAttributes(String name, Attributes attributes, boolean recurse) throws Exception {
 
 		SubjectInfo pList = new SubjectInfo();
 
@@ -590,6 +596,23 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 							member.setValue(attributeValue);
 							group.addHasMember(member);
 							log.debug("Found attribute: " + attributeName + "=" + attributeValue);
+							// look up details for this Group?
+							if (recurse) {
+								// only one level of recursion
+								SubjectInfo groupInfo = this.getSubjectInfo(null, member, false);
+								// has people as members?
+								if (groupInfo.getPersonList() != null) {
+									for (Person p: groupInfo.getPersonList()) {
+										pList.addPerson(p);
+									}
+								}
+								// has other groups as members?
+								if (groupInfo.getGroupList() != null) {
+									for (Group g: groupInfo.getGroupList()) {
+										pList.addGroup(g);
+									}
+								}
+							}
 						}
 					}
 				}
@@ -651,6 +674,23 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 							group.setValue(attributeValue);
 							person.addIsMemberOf(group);
 							log.debug("Found attribute: " + attributeName + "=" + attributeValue);
+							// look up details for this Group?
+							if (recurse) {
+								// only one level of recursion
+								SubjectInfo groupInfo = this.getSubjectInfo(null, group, false);
+								if (groupInfo.getGroupList() != null) {
+									for (Group g: groupInfo.getGroupList()) {
+										pList.addGroup(g);
+									}
+								}
+								// NOTE: this does not make sense to include other members
+								// has members?
+	//							if (groupInfo.getPersonList() != null) {
+	//								for (Person p: groupInfo.getPersonList()) {
+	//									pList.addPerson(p);
+	//								}
+	//							}
+							}
 						}
 					}
 				}
