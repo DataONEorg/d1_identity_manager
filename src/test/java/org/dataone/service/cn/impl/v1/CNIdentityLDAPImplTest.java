@@ -10,6 +10,7 @@ import org.dataone.configuration.Settings;
 import org.dataone.service.types.v1.Person;
 import org.dataone.service.types.v1.Session;
 import org.dataone.service.types.v1.Subject;
+import org.dataone.service.types.v1.SubjectInfo;
 import org.dataone.service.types.v1.SubjectList;
 import org.junit.After;
 import org.junit.Ignore;
@@ -181,7 +182,7 @@ public class CNIdentityLDAPImplTest {
 			// only add the secondary person because p1 is owner (member by default)
 			SubjectList members = new SubjectList();
 			//members.addPerson(person1);
-			members.addPerson(person2);
+			members.addSubject(person2.getSubject());
 
 			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
 			identityService.setServer(server);
@@ -382,9 +383,9 @@ public class CNIdentityLDAPImplTest {
 			assertNotNull(p);
 
 			boolean check = false;
-			SubjectList subjectList = identityService.getSubjectInfo(getSession(subject), p);
-			assertNotNull(subjectList);
-			check = subjectList.getPerson(0).getEmail(0).equals(email);
+			SubjectInfo subjectInfo = identityService.getSubjectInfo(getSession(subject), p);
+			assertNotNull(subjectInfo);
+			check = subjectInfo.getPerson(0).getEmail(0).equals(email);
 			assertTrue(check);
 
 			//clean up
@@ -418,7 +419,7 @@ public class CNIdentityLDAPImplTest {
 			groupSubject.setValue(groupName);
 
 			SubjectList members = new SubjectList();
-			members.addPerson(person);
+			members.addSubject(person.getSubject());
 
 			boolean check = false;
 
@@ -433,11 +434,11 @@ public class CNIdentityLDAPImplTest {
 //			assertTrue(check);
 
 			// check the subjects exist
-			SubjectList subjectList = identityService.listSubjects(getSession(subject), null, -1, -1);
-			assertNotNull(subjectList);
-			check = subjectList.getPerson(0).getEmail(0).equalsIgnoreCase(email);
+			SubjectInfo subjectInfo = identityService.listSubjects(getSession(subject), null, -1, -1);
+			assertNotNull(subjectInfo);
+			check = subjectInfo.getPerson(0).getEmail(0).equalsIgnoreCase(email);
 			assertTrue(check);
-			check = subjectList.getGroup(0).getSubject().getValue().equalsIgnoreCase(groupName);
+			check = subjectInfo.getGroup(0).getSubject().getValue().equalsIgnoreCase(groupName);
 			assertTrue(check);
 
 			//clean up
