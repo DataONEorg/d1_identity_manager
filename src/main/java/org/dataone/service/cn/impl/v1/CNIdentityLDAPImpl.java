@@ -118,12 +118,8 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 
     	try {
 
-	        // check that they have admin rights for group
-	        Subject user = session.getSubject();
-	        boolean canEdit = this.checkAttribute(groupName.getValue(), "owner", user.getValue());
-	        if (!canEdit) {
-	        	throw new NotAuthorized(null, "Subject not in owner list: " + user.getValue());
-	        }
+    		// will throw NotAuthorized if not true
+			boolean canEdit = canEditGroup(session, groupName);
 
 	        // context
 	        DirContext ctx = getContext();
@@ -145,7 +141,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		        ctx.modifyAttributes(groupName.getValue(), mods);
 		        log.debug("Added member: " + subject.getValue() + " to group: " + groupName.getValue() );
 	        }
-	    } catch (Exception e) {
+	    } catch (NamingException e) {
 	        throw new ServiceFailure("2590", "Could not add group members: " + e.getMessage());
 	    }
 
@@ -158,13 +154,9 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		throws ServiceFailure, InvalidToken, NotAuthorized, NotFound, NotImplemented, InvalidRequest {
 
 		try {
-
-	        // check that they have admin rights for group
-	        Subject user = session.getSubject();
-	        boolean canEdit = this.checkAttribute(groupName.getValue(), "owner", user.getValue());
-	        if (!canEdit) {
-	        	throw new NotAuthorized(null, "Subject not in owner list: " + user.getValue());
-	        }
+			
+			// will throw NotAuthorized if not true
+			boolean canEdit = canEditGroup(session, groupName);
 
 	        // context
 	        DirContext ctx = getContext();
@@ -180,12 +172,34 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		        ctx.modifyAttributes(groupName.getValue(), mods);
 		        log.debug("Removed member: " + subject.getValue() + " from group: " + groupName.getValue() );
 	        }
-	    } catch (Exception e) {
+	    } catch (NamingException e) {
 	        throw new ServiceFailure("2690", "Could not remove group members: " + e.getMessage());
 	    }
 
 		return true;
 
+	}
+	
+	private boolean canEditGroup(Session session, Subject groupName) throws NamingException, NotAuthorized {
+		// check that they have admin rights for group
+        boolean canEdit = false;
+        Subject user = session.getSubject();
+        String userDN = CertificateManager.getInstance().standardizeDN(user.getValue());
+        List<Object> owners = this.getAttributeValues(groupName.getValue(), "owner");
+        for (Object ownerObj: owners) {
+        	String owner = (String) ownerObj;
+        	owner = CertificateManager.getInstance().standardizeDN(owner);
+        	if (userDN.equals(owner)) {
+        		canEdit = true;
+        		break;
+        	}
+        }
+        
+        if (!canEdit) {
+        	throw new NotAuthorized("2560", "Subject not in owner list: " + userDN);
+        }
+        
+        return canEdit;
 	}
 
     @Override
