@@ -525,7 +525,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
     @Override
     public boolean isPublic(Session session, Subject subject) 
     throws ServiceFailure, InvalidRequest, NotAuthorized, NotImplemented, NotFound {
-    	return subject.getValue().equals(Constants.PUBLIC_SUBJECT);
+    	return subject.getValue().equals(Constants.SUBJECT_PUBLIC);
     }
 
 	private SubjectInfo processAttributes(String name, Attributes attributes) throws Exception {
