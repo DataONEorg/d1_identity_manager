@@ -35,6 +35,7 @@ import org.dataone.service.types.v1.Group;
 import org.dataone.service.types.v1.Person;
 import org.dataone.service.types.v1.Session;
 import org.dataone.service.types.v1.Subject;
+import org.dataone.service.types.v1.SubjectInfo;
 import org.dataone.service.types.v1.SubjectList;
 
 
@@ -128,17 +129,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	        DirContext ctx = getContext();
 
 	        // collect all the subjects from groups and people
-	        List<Subject> subjects = new ArrayList<Subject>();
-	        if (members.getGroupList() != null) {
-		        for (Group group: members.getGroupList()) {
-		        	subjects.add(group.getSubject());
-		        }
-	        }
-	        if (members.getPersonList() != null) {
-		        for (Person person: members.getPersonList()) {
-		        	subjects.add(person.getSubject());
-		        }
-	        }
+	        List<Subject> subjects = members.getSubjectList();
 	        for (Subject subject: subjects) {
 		        // check that they are not already a member
 	        	boolean isMember = this.checkAttribute(groupName.getValue(), "uniqueMember", subject.getValue());
@@ -179,17 +170,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	        DirContext ctx = getContext();
 
 	        //collect all the subjects from groups and people
-	        List<Subject> subjects = new ArrayList<Subject>();
-	        if (members.getGroupList() != null) {
-		        for (Group group: members.getGroupList()) {
-		        	subjects.add(group.getSubject());
-		        }
-	        }
-	        if (members.getPersonList() != null) {
-		        for (Person person: members.getPersonList()) {
-		        	subjects.add(person.getSubject());
-		        }
-	        }
+	        List<Subject> subjects = members.getSubjectList();
 	        for (Subject subject: subjects) {
 		        // remove them as a member
 		        ModificationItem[] mods = new ModificationItem[1];
@@ -447,10 +428,10 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	}
 
 	@Override
-	public SubjectList getSubjectInfo(Session session, Subject subject)
+	public SubjectInfo getSubjectInfo(Session session, Subject subject)
     	throws ServiceFailure, InvalidRequest, NotAuthorized, NotImplemented {
 
-		SubjectList pList = new SubjectList();
+		SubjectInfo pList = new SubjectInfo();
 	    String dn = subject.getValue();
 		try {
 			DirContext ctx = getContext();
@@ -468,11 +449,11 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 
 	// TODO: use query and start/count params
 	@Override
-	public SubjectList listSubjects(Session session, String query, Integer start,
+	public SubjectInfo listSubjects(Session session, String query, Integer start,
 	        Integer count) throws ServiceFailure, InvalidToken, NotAuthorized,
 	        NotImplemented {
 
-		SubjectList pList = new SubjectList();
+		SubjectInfo pList = new SubjectInfo();
 		try {
 			DirContext ctx = getContext();
 			SearchControls ctls = new SearchControls();
@@ -503,7 +484,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	            String dn = si.getNameInNamespace();
 	            log.debug("Search result found for: " + dn);
 	            Attributes attrs = si.getAttributes();
-                SubjectList resultList = processAttributes(dn, attrs);
+	            SubjectInfo resultList = processAttributes(dn, attrs);
                 if (resultList != null) {
                 	// add groups
 	                for (Group group: resultList.getGroupList()) {
@@ -528,11 +509,11 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
     @Override
 	public boolean isGroup(Session session, Subject subject) 
 	throws ServiceFailure, InvalidRequest, NotAuthorized, NotImplemented, NotFound {
-    	SubjectList subjectList = this.getSubjectInfo(session, subject);
+    	SubjectInfo subjectInfo = this.getSubjectInfo(session, subject);
     	// we have a group
-    	if (subjectList.getGroupList() != null && subjectList.getGroupList().size() > 0) {
+    	if (subjectInfo.getGroupList() != null && subjectInfo.getGroupList().size() > 0) {
     		// we have no people
-    		if (subjectList.getPersonList() == null || subjectList.getPersonList().size() == 0) {
+    		if (subjectInfo.getPersonList() == null || subjectInfo.getPersonList().size() == 0) {
     			return true;
     		}
     	}
@@ -547,9 +528,9 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
     	return subject.getValue().equals(Constants.PUBLIC_SUBJECT);
     }
 
-	private SubjectList processAttributes(String name, Attributes attributes) throws Exception {
+	private SubjectInfo processAttributes(String name, Attributes attributes) throws Exception {
 
-		SubjectList pList = new SubjectList();
+		SubjectInfo pList = new SubjectInfo();
 
 		// convert to use the standardized string representation
 		name = CertificateManager.getInstance().standardizeDN(name);
@@ -682,8 +663,8 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
 			identityService.setServer("ldap://cn-dev.dataone.org:389");
 			//identityService.removeSubject(p);
-			SubjectList sl = identityService.getSubjectInfo(null, p);
-			String subjectDn = sl.getPerson(0).getSubject().getValue();
+			SubjectInfo si = identityService.getSubjectInfo(null, p);
+			String subjectDn = si.getPerson(0).getSubject().getValue();
 			System.out.println(subjectDn);
 
 		} catch (Exception e) {
