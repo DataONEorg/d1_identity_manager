@@ -468,7 +468,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 
 	// TODO: use query and start/count params
 	@Override
-	public SubjectInfo listSubjects(Session session, String query, Integer start,
+	public SubjectInfo listSubjects(Session session, String query, String status, Integer start,
 	        Integer count) throws ServiceFailure, InvalidToken, NotAuthorized,
 	        NotImplemented {
 
@@ -493,6 +493,13 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		    		")";
 		    	// combine the query with the object class restriction 
 		    	searchCriteria = "(&" + queryCriteria + searchCriteria + ")";
+		    }
+		    // tack on the status filter
+		    if (status != null) {
+			    Boolean isVerified = new Boolean(status.equalsIgnoreCase("verified"));
+		    	// verified is a boolean in ldap
+		    	String statusCriteria = "(isVerified=" + isVerified.toString().toUpperCase() + ")";
+		    	searchCriteria = "(&" + statusCriteria + searchCriteria + ")";
 		    }
 
 	        NamingEnumeration<SearchResult> results =
