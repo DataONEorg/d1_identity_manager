@@ -455,7 +455,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		try {
 			DirContext ctx = getContext();
 			Attributes attributes = ctx.getAttributes(dn);
-			subjectInfo = processAttributes(dn, attributes, recurse);
+			subjectInfo = processAttributes(dn, attributes, recurse, false);
 			log.debug("Retrieved SubjectList for: " + dn);
 		} catch (Exception e) {
 			String msg = "Problem looking up entry: " + dn + " : " + e.getMessage();
@@ -510,8 +510,8 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	            String dn = si.getNameInNamespace();
 	            log.debug("Search result found for: " + dn);
 	            Attributes attrs = si.getAttributes();
-	            // DO NOT look up other details about matching Groups or Persons
-	            SubjectInfo resultList = processAttributes(dn, attrs, false);
+	            // DO NOT look up other details about matching Groups or Persons, nor include equivalentIdentity requests
+	            SubjectInfo resultList = processAttributes(dn, attrs, false, false);
                 if (resultList != null) {
                 	// add groups
 	                for (Group group: resultList.getGroupList()) {
@@ -555,7 +555,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
     	return subject.getValue().equals(Constants.SUBJECT_PUBLIC);
     }
 
-	private SubjectInfo processAttributes(String name, Attributes attributes, boolean recurse) throws Exception {
+	private SubjectInfo processAttributes(String name, Attributes attributes, boolean recurse, boolean equivalentIdentityRequestsOnly) throws Exception {
 
 		SubjectInfo pList = new SubjectInfo();
 
@@ -662,26 +662,50 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 							log.debug("Found attribute: " + attributeName + "=" + attributeValue);
 						}
 					}
-					if (attributeName.equalsIgnoreCase("equivalentIdentity")) {
-						items = (NamingEnumeration<String>) attribute.getAll();
-						while (items.hasMore()) {
-							attributeValue = items.next();
-							Subject equivalentIdentity = new Subject();
-							equivalentIdentity.setValue(attributeValue);
-							person.addEquivalentIdentity(equivalentIdentity);
-							log.debug("Found attribute: " + attributeName + "=" + attributeValue);
-							// add this identity to the subject list
-							if (recurse) {
-								// only one level of recursion
-								SubjectInfo equivalentIdentityInfo = this.getSubjectInfo(null, equivalentIdentity, false);
-								if (equivalentIdentityInfo.getPersonList() != null) {
-									for (Person p: equivalentIdentityInfo.getPersonList()) {
-										pList.addPerson(p);
+					// do we care about the requests or just the confirmed ones?
+					if (equivalentIdentityRequestsOnly) {
+						if (attributeName.equalsIgnoreCase("equivalentIdentityRequest")) {
+							items = (NamingEnumeration<String>) attribute.getAll();
+							while (items.hasMore()) {
+								attributeValue = items.next();
+								Subject equivalentIdentityRequest = new Subject();
+								equivalentIdentityRequest.setValue(attributeValue);
+								log.debug("Found attribute: " + attributeName + "=" + attributeValue);
+								// add this identity to the subject list
+								if (recurse) {
+									// only one level of recursion
+									SubjectInfo equivalentIdentityRequestInfo = this.getSubjectInfo(null, equivalentIdentityRequest, false);
+									if (equivalentIdentityRequestInfo.getPersonList() != null) {
+										for (Person p: equivalentIdentityRequestInfo.getPersonList()) {
+											pList.addPerson(p);
+										}
+									}
+								}
+							}
+						}
+					} else {
+						if (attributeName.equalsIgnoreCase("equivalentIdentity")) {
+							items = (NamingEnumeration<String>) attribute.getAll();
+							while (items.hasMore()) {
+								attributeValue = items.next();
+								Subject equivalentIdentity = new Subject();
+								equivalentIdentity.setValue(attributeValue);
+								person.addEquivalentIdentity(equivalentIdentity);
+								log.debug("Found attribute: " + attributeName + "=" + attributeValue);
+								// add this identity to the subject list
+								if (recurse) {
+									// only one level of recursion
+									SubjectInfo equivalentIdentityInfo = this.getSubjectInfo(null, equivalentIdentity, false);
+									if (equivalentIdentityInfo.getPersonList() != null) {
+										for (Person p: equivalentIdentityInfo.getPersonList()) {
+											pList.addPerson(p);
+										}
 									}
 								}
 							}
 						}
 					}
+					
 					// TODO: store in person, or only in group entry?
 					if (attributeName.equalsIgnoreCase("memberOf")) {
 						items = (NamingEnumeration<String>) attribute.getAll();
@@ -722,6 +746,116 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	public boolean removeSubject(Subject p) {
 		return super.removeEntry(p.getValue());
 	}
+	
+	@Override
+	public boolean denyMapIdentity(Session session, Subject secondarySubject)
+			throws ServiceFailure, InvalidToken, NotAuthorized, NotFound,
+			NotImplemented, InvalidRequest {
+		try {
+			// primary subject in the session
+			Subject primarySubject = session.getSubject();
+
+	        // get the context
+	        DirContext ctx = getContext();
+
+	        // check if primary has requested secondary
+	        boolean confirmationRequest =
+	        	checkAttribute(primarySubject.getValue(), "equivalentIdentityRequest", secondarySubject.getValue());
+
+	        ModificationItem[] mods = null;
+	        Attribute mod0 = null;
+	        if (!confirmationRequest) {
+		        throw new InvalidRequest("", "Request has not been issued for: " + secondarySubject.getValue() + " = " + primarySubject.getValue());
+	        } else {
+	        	// mark secondary as having the equivalentIdentityRequest
+		        mods = new ModificationItem[1];
+		        mod0 = new BasicAttribute("equivalentIdentityRequest", primarySubject.getValue());
+		        mods[0] = new ModificationItem(DirContext.REMOVE_ATTRIBUTE, mod0);
+		        // make the change
+		        ctx.modifyAttributes(secondarySubject.getValue(), mods);
+		        log.debug("Successfully removed equivalentIdentityRequest on: " + secondarySubject.getValue() + " for " + primarySubject.getValue());
+	        }
+
+		} catch (Exception e) {
+	    	throw new ServiceFailure("2390", "Could not map identity: " + e.getMessage());
+	    }
+
+		return true;
+	}
+	
+	@Override
+	public SubjectInfo getPendingMapIdentity(Session session, Subject subject)
+			throws ServiceFailure, InvalidToken, NotAuthorized, NotFound,
+			NotImplemented, InvalidRequest {
+		
+		SubjectInfo subjectInfo = new SubjectInfo();
+	    String dn = subject.getValue();
+		try {
+			DirContext ctx = getContext();
+			Attributes attributes = ctx.getAttributes(dn);
+			// include the equivalent identity requests only
+			subjectInfo = processAttributes(dn, attributes, true, true);
+			log.debug("Retrieved SubjectList for: " + dn);
+		} catch (Exception e) {
+			String msg = "Problem looking up entry: " + dn + " : " + e.getMessage();
+	    	log.error(msg, e);
+	    	throw new ServiceFailure("4561", msg);
+		}
+
+		return subjectInfo;
+		
+	}
+	
+	@Override
+	public boolean removeMapIdentity(Session session, Subject secondarySubject)
+			throws ServiceFailure, InvalidToken, NotAuthorized, NotFound,
+			NotImplemented, InvalidRequest {
+		
+		try {
+			// primary subject in the session
+			Subject primarySubject = session.getSubject();
+
+		    // get the context
+		    DirContext ctx = getContext();
+
+		    // check if primary has secondary equivalence
+		    boolean mappingExists =
+		    	checkAttribute(primarySubject.getValue(), "equivalentIdentity", secondarySubject.getValue());
+		    boolean reciprocolMappingExists =
+		    	checkAttribute(secondarySubject.getValue(), "equivalentIdentity", primarySubject.getValue());
+
+		    ModificationItem[] mods = null;
+		    Attribute mod0 = null;
+		    if (mappingExists && reciprocolMappingExists) {
+		        // remove attribute on primarySubject
+		        mods = new ModificationItem[2];
+		        mod0 = new BasicAttribute("equivalentIdentity", secondarySubject.getValue());
+		        mods[0] = new ModificationItem(DirContext.REMOVE_ATTRIBUTE, mod0);
+		        // remove the request from primary since it is confirmed now
+		        Attribute mod1 = new BasicAttribute("equivalentIdentityRequest", secondarySubject.getValue());
+		        mods[1] = new ModificationItem(DirContext.REMOVE_ATTRIBUTE, mod1);
+		        // make the change
+		        ctx.modifyAttributes(primarySubject.getValue(), mods);
+		        log.debug("Successfully removed equivalentIdentity: " + primarySubject.getValue() + " = " + secondarySubject.getValue());
+
+		        // update attribute on secondarySubject
+		        mods = new ModificationItem[1];
+		        mod0 = new BasicAttribute("equivalentIdentity", primarySubject.getValue());
+		        mods[0] = new ModificationItem(DirContext.REMOVE_ATTRIBUTE, mod0);
+		        // make the change
+		        ctx.modifyAttributes(secondarySubject.getValue(), mods);
+		        log.debug("Successfully removed reciprocal equivalentIdentity: " + secondarySubject.getValue() + " = " + primarySubject.getValue());
+		    } else {
+		    	// no request to confirm
+		        throw new InvalidRequest("", "There is no identity mapping for: " + secondarySubject.getValue() + " for " + primarySubject.getValue());
+		    }
+
+		} catch (Exception e) {
+	    	throw new ServiceFailure("2390", "Could not remove identity mapping: " + e.getMessage());
+		}
+
+		return true;
+	}
 
 	public static void main(String[] args) {
 		try {
@@ -741,5 +875,4 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 			e.printStackTrace();
 		}
 	}
-
 }
