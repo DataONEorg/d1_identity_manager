@@ -832,7 +832,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		        mod0 = new BasicAttribute("equivalentIdentity", secondarySubject.getValue());
 		        mods[0] = new ModificationItem(DirContext.REMOVE_ATTRIBUTE, mod0);
 		        // remove the request from primary since it is confirmed now
-		        Attribute mod1 = new BasicAttribute("equivalentIdentityRequest", secondarySubject.getValue());
+		        Attribute mod1 = new BasicAttribute("equivalentIdentity", secondarySubject.getValue());
 		        mods[1] = new ModificationItem(DirContext.REMOVE_ATTRIBUTE, mod1);
 		        // make the change
 		        ctx.modifyAttributes(primarySubject.getValue(), mods);
