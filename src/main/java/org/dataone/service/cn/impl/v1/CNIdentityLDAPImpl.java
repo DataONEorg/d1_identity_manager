@@ -616,7 +616,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 						}
 					}
 				}
-				pList.addGroup(group);
+				pList.getGroupList().add(0, group);
 
 			} else {
 				// process as a person
@@ -704,9 +704,8 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 						}
 					}
 				}
-				// TODO: handle group membership here?
-
-				pList.addPerson(person);
+				// add as the first one in the list
+				pList.getPersonList().add(0, person);
 			}
 		}
 
