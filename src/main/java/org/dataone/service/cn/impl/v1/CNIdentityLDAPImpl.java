@@ -758,26 +758,26 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	        // get the context
 	        DirContext ctx = getContext();
 
-	        // check if primary has requested secondary
+	        // check if primary has the request from secondary
 	        boolean confirmationRequest =
 	        	checkAttribute(primarySubject.getValue(), "equivalentIdentityRequest", secondarySubject.getValue());
 
 	        ModificationItem[] mods = null;
 	        Attribute mod0 = null;
 	        if (!confirmationRequest) {
-		        throw new InvalidRequest("", "Request has not been issued for: " + secondarySubject.getValue() + " = " + primarySubject.getValue());
+		        throw new InvalidRequest("", "Identity mapping request has not been issued for: " + primarySubject.getValue() + " = " + secondarySubject.getValue());
 	        } else {
-	        	// mark secondary as having the equivalentIdentityRequest
+	        	// remove the request
 		        mods = new ModificationItem[1];
-		        mod0 = new BasicAttribute("equivalentIdentityRequest", primarySubject.getValue());
+		        mod0 = new BasicAttribute("equivalentIdentityRequest", secondarySubject.getValue());
 		        mods[0] = new ModificationItem(DirContext.REMOVE_ATTRIBUTE, mod0);
 		        // make the change
-		        ctx.modifyAttributes(secondarySubject.getValue(), mods);
-		        log.debug("Successfully removed equivalentIdentityRequest on: " + secondarySubject.getValue() + " for " + primarySubject.getValue());
+		        ctx.modifyAttributes(primarySubject.getValue(), mods);
+		        log.debug("Successfully removed equivalentIdentityRequest on: " + primarySubject.getValue() + " for " + secondarySubject.getValue());
 	        }
 
 		} catch (Exception e) {
-	    	throw new ServiceFailure("2390", "Could not map identity: " + e.getMessage());
+	    	throw new ServiceFailure("2390", "Could not deny the identity mapping: " + e.getMessage());
 	    }
 
 		return true;
@@ -828,17 +828,14 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		    Attribute mod0 = null;
 		    if (mappingExists && reciprocolMappingExists) {
 		        // remove attribute on primarySubject
-		        mods = new ModificationItem[2];
+		        mods = new ModificationItem[1];
 		        mod0 = new BasicAttribute("equivalentIdentity", secondarySubject.getValue());
 		        mods[0] = new ModificationItem(DirContext.REMOVE_ATTRIBUTE, mod0);
-		        // remove the request from primary since it is confirmed now
-		        Attribute mod1 = new BasicAttribute("equivalentIdentity", secondarySubject.getValue());
-		        mods[1] = new ModificationItem(DirContext.REMOVE_ATTRIBUTE, mod1);
 		        // make the change
 		        ctx.modifyAttributes(primarySubject.getValue(), mods);
 		        log.debug("Successfully removed equivalentIdentity: " + primarySubject.getValue() + " = " + secondarySubject.getValue());
 
-		        // update attribute on secondarySubject
+		        // remove attribute on secondarySubject
 		        mods = new ModificationItem[1];
 		        mod0 = new BasicAttribute("equivalentIdentity", primarySubject.getValue());
 		        mods[0] = new ModificationItem(DirContext.REMOVE_ATTRIBUTE, mod0);
