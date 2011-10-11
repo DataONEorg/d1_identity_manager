@@ -434,7 +434,7 @@ public class CNIdentityLDAPImplTest {
 //			assertTrue(check);
 
 			// check the subjects exist
-			SubjectInfo subjectInfo = identityService.listSubjects(getSession(subject), null, -1, -1);
+			SubjectInfo subjectInfo = identityService.listSubjects(getSession(subject), null, null, 0, -1);
 			assertNotNull(subjectInfo);
 			check = subjectInfo.getPerson(0).getEmail(0).equalsIgnoreCase(email);
 			assertTrue(check);
