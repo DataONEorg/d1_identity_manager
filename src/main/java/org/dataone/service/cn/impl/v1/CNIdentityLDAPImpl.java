@@ -663,6 +663,16 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 							equivalentIdentity.setValue(attributeValue);
 							person.addEquivalentIdentity(equivalentIdentity);
 							log.debug("Found attribute: " + attributeName + "=" + attributeValue);
+							// add this identity to the subject list
+							if (recurse) {
+								// only one level of recursion
+								SubjectInfo equivalentIdentityInfo = this.getSubjectInfo(null, equivalentIdentity, false);
+								if (equivalentIdentityInfo.getPersonList() != null) {
+									for (Person p: equivalentIdentityInfo.getPersonList()) {
+										pList.addPerson(p);
+									}
+								}
+							}
 						}
 					}
 					// TODO: store in person, or only in group entry?
