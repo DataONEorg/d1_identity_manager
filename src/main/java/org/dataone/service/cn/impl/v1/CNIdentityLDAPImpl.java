@@ -16,6 +16,7 @@ import javax.naming.directory.SearchResult;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.dataone.client.D1Client;
 import org.dataone.client.auth.CertificateManager;
 import org.dataone.cn.ldap.LDAPService;
 import org.dataone.configuration.Settings;
@@ -29,6 +30,7 @@ import org.dataone.service.exceptions.NotFound;
 import org.dataone.service.exceptions.NotImplemented;
 import org.dataone.service.exceptions.ServiceFailure;
 import org.dataone.service.types.v1.Group;
+import org.dataone.service.types.v1.Node;
 import org.dataone.service.types.v1.Person;
 import org.dataone.service.types.v1.Session;
 import org.dataone.service.types.v1.Subject;
@@ -201,7 +203,78 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	}
 
     @Override
-	public boolean mapIdentity(Session session, Subject secondarySubject)
+	public boolean mapIdentity(Session session, Subject primarySubject, Subject secondarySubject)
+			throws ServiceFailure, InvalidToken, NotAuthorized, NotFound,
+			NotImplemented, InvalidRequest {
+
+        int failureCount = 0;
+
+        // TODO: check for admin user (MN?) in the Session object
+        boolean isAllowed = false;
+        Subject sessionSubject = session.getSubject();
+        for (Node node: D1Client.getCN().listNodes().getNodeList()) {
+        	for (Subject nodeSubject: node.getSubjectList()) {
+        		if (nodeSubject.getValue().equals(sessionSubject.getValue())) {
+        			isAllowed = true;
+        			break;
+        		}
+        	}
+        	// get out of the loop if we already now we can
+        	if (isAllowed) {
+        		break;
+        	}
+        }
+        
+		try {
+			
+	        // get the context
+	        DirContext ctx = getContext();
+	        ModificationItem[] mods = null;
+	        Attribute mod0 = null;
+	        
+	        // mark primary as having the equivalentIdentity
+	        try {
+		        mods = new ModificationItem[1];
+		        mod0 = new BasicAttribute("equivalentIdentity", secondarySubject.getValue());
+		        mods[0] = new ModificationItem(DirContext.ADD_ATTRIBUTE, mod0);
+		        // make the change
+		        ctx.modifyAttributes(primarySubject.getValue(), mods);
+		        log.debug("Successfully set equivalentIdentity on: " + primarySubject.getValue() + " for " + secondarySubject.getValue());
+	        } catch (Exception e) {
+				// one failure is OK, two is not
+		        log.warn("Could not set equivalentIdentity on: " + primarySubject.getValue() + " for " + secondarySubject.getValue(), e);
+		        failureCount++;
+			}
+	        
+        	// mark secondary as having the equivalentIdentity
+	        try {
+		        mods = new ModificationItem[1];
+		        mod0 = new BasicAttribute("equivalentIdentity", primarySubject.getValue());
+		        mods[0] = new ModificationItem(DirContext.ADD_ATTRIBUTE, mod0);
+		        // make the change
+		        ctx.modifyAttributes(secondarySubject.getValue(), mods);
+		        log.debug("Successfully set equivalentIdentity on: " + secondarySubject.getValue() + " for " + primarySubject.getValue());
+	        } catch (Exception e) {
+				// one failure is OK, two is not
+		        log.warn("Could not set equivalentIdentity on: " + secondarySubject.getValue() + " for " + primarySubject.getValue(), e);
+		        failureCount++;
+			}
+	        
+	        
+		} catch (Exception e) {
+	    	throw new ServiceFailure("2390", "Could not map identity: " + e.getMessage());
+	    }
+		
+		// one account need not exist and this should still succeed
+		if (failureCount > 1) {
+	    	throw new ServiceFailure("2390", "Could not map identity, neither account could be edited.");
+		}
+		
+		return true;
+	}
+    
+	@Override
+	public boolean requestMapIdentity(Session session, Subject secondarySubject)
 			throws ServiceFailure, InvalidToken, NotAuthorized, NotFound,
 			NotImplemented, InvalidRequest {
 
