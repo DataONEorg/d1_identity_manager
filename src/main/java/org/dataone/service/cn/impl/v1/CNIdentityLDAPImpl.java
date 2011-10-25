@@ -603,7 +603,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 							member.setValue(attributeValue);
 							group.addHasMember(member);
 							log.debug("Found attribute: " + attributeName + "=" + attributeValue);
-							// look up details for this Group?
+							// look up details for this Group member?
 							if (recurse) {
 								// only one level of recursion
 								SubjectInfo groupInfo = this.getSubjectInfo(null, member, false);
@@ -671,14 +671,27 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 								Subject equivalentIdentityRequest = new Subject();
 								equivalentIdentityRequest.setValue(attributeValue);
 								log.debug("Found attribute: " + attributeName + "=" + attributeValue);
-								// add this identity to the subject list
+								// add this identity to the subject list?
 								if (recurse) {
-									// only one level of recursion
-									SubjectInfo equivalentIdentityRequestInfo = this.getSubjectInfo(null, equivalentIdentityRequest, false);
-									if (equivalentIdentityRequestInfo.getPersonList() != null) {
-										for (Person p: equivalentIdentityRequestInfo.getPersonList()) {
-											pList.addPerson(p);
+									// catch the NotFound in case we only have the subject's DN
+									try {
+										// only one level of recursion
+										SubjectInfo equivalentIdentityRequestInfo = this.getSubjectInfo(null, equivalentIdentityRequest, false);
+										if (equivalentIdentityRequestInfo.getPersonList() != null) {
+											for (Person p: equivalentIdentityRequestInfo.getPersonList()) {
+												pList.addPerson(p);
+											}
 										}
+									} catch (ServiceFailure e) {
+										// ignore NotFound
+										log.warn("No account found for equivalentIdentityRequest entry: " + equivalentIdentityRequest.getValue(), e);
+										// still add this placeholder
+										Person placeholderPerson = new Person();
+										placeholderPerson.setSubject(equivalentIdentityRequest);
+										placeholderPerson.addEmail("NA");
+										placeholderPerson.addGivenName("NA");
+										placeholderPerson.setFamilyName("NA");
+										pList.addPerson(placeholderPerson);
 									}
 								}
 							}
@@ -694,12 +707,25 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 								log.debug("Found attribute: " + attributeName + "=" + attributeValue);
 								// add this identity to the subject list
 								if (recurse) {
-									// only one level of recursion
-									SubjectInfo equivalentIdentityInfo = this.getSubjectInfo(null, equivalentIdentity, false);
-									if (equivalentIdentityInfo.getPersonList() != null) {
-										for (Person p: equivalentIdentityInfo.getPersonList()) {
-											pList.addPerson(p);
+									// allow case where the identity is not found
+									try {
+										// only one level of recursion
+										SubjectInfo equivalentIdentityInfo = this.getSubjectInfo(null, equivalentIdentity, false);
+										if (equivalentIdentityInfo.getPersonList() != null) {
+											for (Person p: equivalentIdentityInfo.getPersonList()) {
+												pList.addPerson(p);
+											}
 										}
+									} catch (ServiceFailure e) {
+										// ignore NotFound
+										log.warn("No account found for equivalentIdentity entry: " + equivalentIdentity.getValue(), e);
+										// still add this placeholder
+										Person placeholderPerson = new Person();
+										placeholderPerson.setSubject(equivalentIdentity);
+										placeholderPerson.addEmail("NA");
+										placeholderPerson.addGivenName("NA");
+										placeholderPerson.setFamilyName("NA");
+										pList.addPerson(placeholderPerson);
 									}
 								}
 							}
