@@ -1,6 +1,5 @@
 package org.dataone.service.cn.impl.v1;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import javax.naming.NameAlreadyBoundException;
@@ -14,15 +13,13 @@ import javax.naming.directory.DirContext;
 import javax.naming.directory.ModificationItem;
 import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
-import javax.security.auth.x500.X500Principal;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.dataone.configuration.Settings;
-import org.dataone.service.util.Constants;
-import org.dataone.service.cn.v1.CNIdentity;
 import org.dataone.client.auth.CertificateManager;
 import org.dataone.cn.ldap.LDAPService;
+import org.dataone.configuration.Settings;
+import org.dataone.service.cn.v1.CNIdentity;
 import org.dataone.service.exceptions.IdentifierNotUnique;
 import org.dataone.service.exceptions.InvalidCredentials;
 import org.dataone.service.exceptions.InvalidRequest;
@@ -37,6 +34,7 @@ import org.dataone.service.types.v1.Session;
 import org.dataone.service.types.v1.Subject;
 import org.dataone.service.types.v1.SubjectInfo;
 import org.dataone.service.types.v1.SubjectList;
+import org.dataone.service.util.Constants;
 
 
 /**
