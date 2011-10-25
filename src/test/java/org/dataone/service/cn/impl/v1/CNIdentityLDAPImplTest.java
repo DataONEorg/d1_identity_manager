@@ -249,7 +249,7 @@ public class CNIdentityLDAPImplTest {
 			assertNotNull(subject);
 
 			// map p1 to p2
-			check = identityService.mapIdentity(getSession(p1), p2);
+			check = identityService.requestMapIdentity(getSession(p1), p2);
 			assertTrue(check);
 			// check pending
 			check = identityService.checkAttribute(p2.getValue(), "equivalentIdentityRequest", p1.getValue());
