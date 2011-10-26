@@ -209,10 +209,11 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 
         int failureCount = 0;
         boolean isAllowed = false;
-        Subject sessionSubject = session.getSubject();
+        Subject sessionSubject = null;
 
         // TODO: check for admin user (MN?) in the Session object
         isAllowed = true;
+//        sessionSubject = session.getSubject();
 //        for (Node node: D1Client.getCN().listNodes().getNodeList()) {
 //        	for (Subject nodeSubject: node.getSubjectList()) {
 //        		if (nodeSubject.getValue().equals(sessionSubject.getValue())) {
@@ -225,10 +226,9 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 //        		break;
 //        	}
 //        }
-
-        if (!isAllowed) {
-        	throw new NotAuthorized("2360", sessionSubject.getValue() + " is not allowed to map identities");
-        }
+//        if (!isAllowed) {
+//        	throw new NotAuthorized("2360", sessionSubject.getValue() + " is not allowed to map identities");
+//        }
         
 		try {
 			
