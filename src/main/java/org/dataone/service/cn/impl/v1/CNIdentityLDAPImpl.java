@@ -230,6 +230,13 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 //        	throw new NotAuthorized("2360", sessionSubject.getValue() + " is not allowed to map identities");
 //        }
         
+        // check for pre-existing mapping
+        boolean mappingExists =
+	    	checkAttribute(primarySubject.getValue(), "equivalentIdentity", secondarySubject.getValue());
+        if (mappingExists) {
+	    	throw new InvalidRequest("", "Account mapping already exists");
+        }
+        
 		try {
 			
 	        // get the context
@@ -290,16 +297,15 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	        // get the context
 	        DirContext ctx = getContext();
 
-	        // check if primary is confirming secondary
-	        boolean confirmationRequest =
+	        // check if request already exists
+	        boolean confirmationRequested =
 	        	checkAttribute(primarySubject.getValue(), "equivalentIdentityRequest", secondarySubject.getValue());
-
-	        ModificationItem[] mods = null;
-	        Attribute mod0 = null;
-	        if (confirmationRequest) {
-		        log.warn("Request already issued for: " + secondarySubject.getValue() + " = " + primarySubject.getValue());
-		        return false;
+	        
+	        if (confirmationRequested) {
+		        throw new InvalidRequest("", "Request already issued for: " + secondarySubject.getValue() + " = " + primarySubject.getValue());
 	        } else {
+	        	ModificationItem[] mods = null;
+		        Attribute mod0 = null;
 	        	// mark secondary as having the equivalentIdentityRequest
 		        mods = new ModificationItem[1];
 		        mod0 = new BasicAttribute("equivalentIdentityRequest", primarySubject.getValue());
@@ -310,7 +316,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	        }
 
 		} catch (Exception e) {
-	    	throw new ServiceFailure("2390", "Could not map identity: " + e.getMessage());
+	    	throw new ServiceFailure("2390", "Could not request map identity: " + e.getMessage());
 	    }
 
 		return true;
@@ -335,10 +341,12 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		    ModificationItem[] mods = null;
 		    Attribute mod0 = null;
 		    if (confirmationRequest) {
+		    	
 		        // update attribute on primarySubject
 		        mods = new ModificationItem[2];
 		        mod0 = new BasicAttribute("equivalentIdentity", secondarySubject.getValue());
 		        mods[0] = new ModificationItem(DirContext.ADD_ATTRIBUTE, mod0);
+		        
 		        // remove the request from primary since it is confirmed now
 		        Attribute mod1 = new BasicAttribute("equivalentIdentityRequest", secondarySubject.getValue());
 		        mods[1] = new ModificationItem(DirContext.REMOVE_ATTRIBUTE, mod1);
@@ -355,8 +363,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		        log.debug("Successfully set reciprocal equivalentIdentity: " + secondarySubject.getValue() + " = " + primarySubject.getValue());
 		    } else {
 		    	// no request to confirm
-		        log.error("There is no identity mapping request to confim on: " + secondarySubject.getValue() + " for " + primarySubject.getValue());
-		        return false;
+		        throw new InvalidRequest("", "There is no identity mapping request to confim on: " + secondarySubject.getValue() + " for " + primarySubject.getValue());
 		    }
 
 		} catch (Exception e) {
