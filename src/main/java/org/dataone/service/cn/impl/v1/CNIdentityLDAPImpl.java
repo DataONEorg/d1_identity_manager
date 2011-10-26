@@ -928,25 +928,32 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 
 		    ModificationItem[] mods = null;
 		    Attribute mod0 = null;
-		    if (mappingExists && reciprocolMappingExists) {
+		    // allow removal of one-way mapping in cases where identity is not registered in D1
+		    if (mappingExists || reciprocolMappingExists) {
+		    	
 		        // remove attribute on primarySubject
-		        mods = new ModificationItem[1];
-		        mod0 = new BasicAttribute("equivalentIdentity", secondarySubject.getValue());
-		        mods[0] = new ModificationItem(DirContext.REMOVE_ATTRIBUTE, mod0);
-		        // make the change
-		        ctx.modifyAttributes(primarySubject.getValue(), mods);
-		        log.debug("Successfully removed equivalentIdentity: " + primarySubject.getValue() + " = " + secondarySubject.getValue());
-
+		    	if (mappingExists) {
+			        mods = new ModificationItem[1];
+			        mod0 = new BasicAttribute("equivalentIdentity", secondarySubject.getValue());
+			        mods[0] = new ModificationItem(DirContext.REMOVE_ATTRIBUTE, mod0);
+			        // make the change
+			        ctx.modifyAttributes(primarySubject.getValue(), mods);
+			        log.debug("Successfully removed equivalentIdentity: " + primarySubject.getValue() + " = " + secondarySubject.getValue());
+		    	}
+		    	
 		        // remove attribute on secondarySubject
-		        mods = new ModificationItem[1];
-		        mod0 = new BasicAttribute("equivalentIdentity", primarySubject.getValue());
-		        mods[0] = new ModificationItem(DirContext.REMOVE_ATTRIBUTE, mod0);
-		        // make the change
-		        ctx.modifyAttributes(secondarySubject.getValue(), mods);
-		        log.debug("Successfully removed reciprocal equivalentIdentity: " + secondarySubject.getValue() + " = " + primarySubject.getValue());
+		    	if (reciprocolMappingExists) {
+			        mods = new ModificationItem[1];
+			        mod0 = new BasicAttribute("equivalentIdentity", primarySubject.getValue());
+			        mods[0] = new ModificationItem(DirContext.REMOVE_ATTRIBUTE, mod0);
+			        // make the change
+			        ctx.modifyAttributes(secondarySubject.getValue(), mods);
+			        log.debug("Successfully removed reciprocal equivalentIdentity: " + secondarySubject.getValue() + " = " + primarySubject.getValue());
+		    	}
+		    	
 		    } else {
-		    	// no request to confirm
-		        throw new InvalidRequest("", "There is no identity mapping for: " + secondarySubject.getValue() + " for " + primarySubject.getValue());
+		    	// neither mapping is valid
+		        throw new InvalidRequest("", "There is no identity mapping between: " + primarySubject.getValue() + " and " + secondarySubject.getValue());
 		    }
 
 		} catch (Exception e) {
