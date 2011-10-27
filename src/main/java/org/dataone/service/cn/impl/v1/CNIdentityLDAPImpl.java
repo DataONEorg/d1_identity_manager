@@ -533,12 +533,15 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	private SubjectInfo getSubjectInfo(Session session, Subject subject, boolean recurse)
     	throws ServiceFailure, InvalidRequest, NotAuthorized, NotImplemented {
 
+		// TODO: who should be allowed all access?
+		boolean redact = true;
+		
 		SubjectInfo subjectInfo = new SubjectInfo();
 	    String dn = subject.getValue();
 		try {
 			DirContext ctx = getContext();
 			Attributes attributes = ctx.getAttributes(dn);
-			subjectInfo = processAttributes(dn, attributes, recurse, false);
+			subjectInfo = processAttributes(dn, attributes, recurse, false, redact);
 			log.debug("Retrieved SubjectList for: " + dn);
 		} catch (Exception e) {
 			String msg = "Problem looking up entry: " + dn + " : " + e.getMessage();
@@ -555,6 +558,9 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	        Integer count) throws ServiceFailure, InvalidToken, NotAuthorized,
 	        NotImplemented {
 
+		// TODO: redaction policy
+		boolean redact = true;
+		
 		SubjectInfo pList = new SubjectInfo();
 		try {
 			DirContext ctx = getContext();
@@ -594,7 +600,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	            log.debug("Search result found for: " + dn);
 	            Attributes attrs = si.getAttributes();
 	            // DO NOT look up other details about matching Groups or Persons, nor include equivalentIdentity requests
-	            SubjectInfo resultList = processAttributes(dn, attrs, false, false);
+	            SubjectInfo resultList = processAttributes(dn, attrs, false, false, redact);
                 if (resultList != null) {
                 	// add groups
 	                for (Group group: resultList.getGroupList()) {
@@ -638,7 +644,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
     	return subject.getValue().equals(Constants.SUBJECT_PUBLIC);
     }
 
-	private SubjectInfo processAttributes(String name, Attributes attributes, boolean recurse, boolean equivalentIdentityRequestsOnly) throws Exception {
+	private SubjectInfo processAttributes(String name, Attributes attributes, boolean recurse, boolean equivalentIdentityRequestsOnly, boolean redact) throws Exception {
 
 		SubjectInfo pList = new SubjectInfo();
 
@@ -730,12 +736,16 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 						log.debug("Found attribute: " + attributeName + "=" + attributeValue);
 					}
 					if (attributeName.equalsIgnoreCase("mail")) {
-						items = (NamingEnumeration<String>) attribute.getAll();
-						while (items.hasMore()) {
-							attributeValue = items.next();
-							person.addEmail(attributeValue);
-							log.debug("Found attribute: " + attributeName + "=" + attributeValue);
+						// should email be redacted?
+						if (!redact) {
+							items = (NamingEnumeration<String>) attribute.getAll();
+							while (items.hasMore()) {
+								attributeValue = items.next();
+								person.addEmail(attributeValue);
+								log.debug("Found attribute: " + attributeName + "=" + attributeValue);
+							}
 						}
+						
 					}
 					if (attributeName.equalsIgnoreCase("givenName")) {
 						items = (NamingEnumeration<String>) attribute.getAll();
@@ -897,13 +907,16 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 			throws ServiceFailure, InvalidToken, NotAuthorized, NotFound,
 			NotImplemented, InvalidRequest {
 		
+		// TODO: redaction policy
+		boolean redact = true;
+		
 		SubjectInfo subjectInfo = new SubjectInfo();
 	    String dn = subject.getValue();
 		try {
 			DirContext ctx = getContext();
 			Attributes attributes = ctx.getAttributes(dn);
 			// include the equivalent identity requests only
-			subjectInfo = processAttributes(dn, attributes, true, true);
+			subjectInfo = processAttributes(dn, attributes, true, true, redact);
 			log.debug("Retrieved SubjectList for: " + dn);
 		} catch (Exception e) {
 			String msg = "Problem looking up entry: " + dn + " : " + e.getMessage();
