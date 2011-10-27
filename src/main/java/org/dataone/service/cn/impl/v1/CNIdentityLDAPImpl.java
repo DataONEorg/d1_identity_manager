@@ -31,6 +31,7 @@ import org.dataone.service.exceptions.NotImplemented;
 import org.dataone.service.exceptions.ServiceFailure;
 import org.dataone.service.types.v1.Group;
 import org.dataone.service.types.v1.Node;
+import org.dataone.service.types.v1.NodeType;
 import org.dataone.service.types.v1.Person;
 import org.dataone.service.types.v1.Session;
 import org.dataone.service.types.v1.Subject;
@@ -533,8 +534,8 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	private SubjectInfo getSubjectInfo(Session session, Subject subject, boolean recurse)
     	throws ServiceFailure, InvalidRequest, NotAuthorized, NotImplemented {
 
-		// TODO: who should be allowed all access?
-		boolean redact = true;
+		// check redaction policy
+		boolean redact = isUnredacted(session);
 		
 		SubjectInfo subjectInfo = new SubjectInfo();
 	    String dn = subject.getValue();
@@ -558,8 +559,8 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	        Integer count) throws ServiceFailure, InvalidToken, NotAuthorized,
 	        NotImplemented {
 
-		// TODO: redaction policy
-		boolean redact = true;
+		// check redaction policy
+		boolean redact = isUnredacted(session);
 		
 		SubjectInfo pList = new SubjectInfo();
 		try {
@@ -907,8 +908,8 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 			throws ServiceFailure, InvalidToken, NotAuthorized, NotFound,
 			NotImplemented, InvalidRequest {
 		
-		// TODO: redaction policy
-		boolean redact = true;
+		// check redaction policy
+		boolean redact = isUnredacted(session);
 		
 		SubjectInfo subjectInfo = new SubjectInfo();
 	    String dn = subject.getValue();
@@ -981,6 +982,23 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		}
 
 		return true;
+	}
+	
+	private boolean isUnredacted(Session session) throws NotImplemented, ServiceFailure {
+		
+		// CN should see unredacted list
+		if (session != null) {
+			for (Node node: D1Client.getCN().listNodes().getNodeList()) {
+				if (node.getType().equals(NodeType.CN)) {
+					for (Subject subject: node.getSubjectList()) {
+						if (subject.getValue().equals(session.getSubject().getValue())) {
+							return true;
+						}
+					}
+				}
+			}
+		}
+		return false;
 	}
 
 	public static void main(String[] args) {
