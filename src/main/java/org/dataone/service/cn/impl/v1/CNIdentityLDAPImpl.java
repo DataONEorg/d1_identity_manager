@@ -38,7 +38,8 @@ import org.dataone.service.types.v1.Subject;
 import org.dataone.service.types.v1.SubjectInfo;
 import org.dataone.service.types.v1.SubjectList;
 import org.dataone.service.util.Constants;
-
+import org.dataone.service.cn.impl.v1.NodeRegistryService;
+import org.dataone.service.types.v1.NodeList;
 
 /**
  * Proposed LDAP schema extensions
@@ -60,7 +61,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 
 	public static Log log = LogFactory.getLog(CNIdentityLDAPImpl.class);
 
-
+        private NodeRegistryService nodeRegistryService = new NodeRegistryService();
 	public CNIdentityLDAPImpl() {
 		// we need to use a different base for the ids
 		this.setBase(Settings.getConfiguration().getString("identity.ldap.base"));
@@ -988,7 +989,8 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		
 		// CN should see unredacted list
 		if (session != null) {
-			for (Node node: D1Client.getCN().listNodes().getNodeList()) {
+                    NodeList nodeList = nodeRegistryService.listNodes();
+			for (Node node: nodeList.getNodeList()) {
 				if (node.getType().equals(NodeType.CN)) {
 					for (Subject subject: node.getSubjectList()) {
 						if (subject.getValue().equals(session.getSubject().getValue())) {
@@ -997,7 +999,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 					}
 				}
 			}
-		}
+		} 
 		return false;
 	}
 
