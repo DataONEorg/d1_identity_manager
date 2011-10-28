@@ -757,6 +757,11 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 							log.debug("Found attribute: " + attributeName + "=" + attributeValue);
 						}
 					}
+					if (attributeName.equalsIgnoreCase("isVerified")) {
+						attributeValue = (String) attribute.get();
+						person.setVerified(Boolean.parseBoolean(attributeValue));
+						log.debug("Found attribute: " + attributeName + "=" + attributeValue);
+					}
 					// do we care about the requests or just the confirmed ones?
 					if (equivalentIdentityRequestsOnly) {
 						if (attributeName.equalsIgnoreCase("equivalentIdentityRequest")) {
