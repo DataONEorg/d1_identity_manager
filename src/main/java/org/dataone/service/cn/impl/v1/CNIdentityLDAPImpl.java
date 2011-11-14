@@ -71,8 +71,8 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
             this.base = base;
         }
 	public Subject createGroup(Session session, Subject groupName) throws ServiceFailure,
-			InvalidToken, NotAuthorized, NotFound, NotImplemented,
-			InvalidRequest, IdentifierNotUnique {
+			InvalidToken, NotAuthorized, NotImplemented,
+			IdentifierNotUnique {
 
 		/* objectClass groupOfUniqueNames....
 		 * MUST ( uniqueMember $ cn )
@@ -327,7 +327,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	@Override
 	public boolean confirmMapIdentity(Session session, Subject secondarySubject)
 			throws ServiceFailure, InvalidToken, NotAuthorized, NotFound,
-			NotImplemented, InvalidRequest {
+			NotImplemented {
 
 		try {
 			// primary subject in the session
@@ -528,12 +528,12 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 
 	@Override
 	public SubjectInfo getSubjectInfo(Session session, Subject subject)
-    	throws ServiceFailure, InvalidRequest, NotAuthorized, NotImplemented {
+    	throws ServiceFailure, NotAuthorized, NotImplemented {
 		return getSubjectInfo(session, subject, true);
 	}
 	
 	private SubjectInfo getSubjectInfo(Session session, Subject subject, boolean recurse)
-    	throws ServiceFailure, InvalidRequest, NotAuthorized, NotImplemented {
+    	throws ServiceFailure, NotAuthorized, NotImplemented {
 
 		// check redaction policy
 		boolean redact = isUnredacted(session);
@@ -624,27 +624,27 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	    return pList;
 	}
 	
-    @Override
-	public boolean isGroup(Session session, Subject subject) 
-	throws ServiceFailure, InvalidRequest, NotAuthorized, NotImplemented, NotFound {
-    	SubjectInfo subjectInfo = this.getSubjectInfo(session, subject);
-    	// we have a group
-    	if (subjectInfo.getGroupList() != null && subjectInfo.getGroupList().size() > 0) {
-    		// we have no people
-    		if (subjectInfo.getPersonList() == null || subjectInfo.getPersonList().size() == 0) {
-    			return true;
-    		}
-    	}
-    	
-    	return false;
-    	
-    }
- 
-    @Override
-    public boolean isPublic(Session session, Subject subject) 
-    throws ServiceFailure, InvalidRequest, NotAuthorized, NotImplemented, NotFound {
-    	return subject.getValue().equals(Constants.SUBJECT_PUBLIC);
-    }
+//    @Override
+//	public boolean isGroup(Session session, Subject subject) 
+//	throws ServiceFailure, InvalidRequest, NotAuthorized, NotImplemented, NotFound {
+//    	SubjectInfo subjectInfo = this.getSubjectInfo(session, subject);
+//    	// we have a group
+//    	if (subjectInfo.getGroupList() != null && subjectInfo.getGroupList().size() > 0) {
+//    		// we have no people
+//    		if (subjectInfo.getPersonList() == null || subjectInfo.getPersonList().size() == 0) {
+//    			return true;
+//    		}
+//    	}
+//    	
+//    	return false;
+//    	
+//    }
+// 
+//    @Override
+//    public boolean isPublic(Session session, Subject subject) 
+//    throws ServiceFailure, InvalidRequest, NotAuthorized, NotImplemented, NotFound {
+//    	return subject.getValue().equals(Constants.SUBJECT_PUBLIC);
+//    }
 
 	private SubjectInfo processAttributes(String name, Attributes attributes, boolean recurse, boolean equivalentIdentityRequestsOnly, boolean redact) throws Exception {
 
