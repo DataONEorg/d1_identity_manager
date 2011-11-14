@@ -45,12 +45,12 @@
 		<dependency>
 			<groupId>org.dataone</groupId>
 			<artifactId>d1_libclient_java</artifactId>
-			<version>1.0.0-SNAPSHOT</version>
+			<version>1.0.1-SNAPSHOT</version>
 			<type>jar</type>
 		</dependency>
-                <dependency>
-                        <groupId>org.dataone</groupId>
-                        <artifactId>d1_cn_noderegistry</artifactId>
+        <dependency>
+            <groupId>org.dataone</groupId>
+            <artifactId>d1_cn_noderegistry</artifactId>
 			<version>1.0.0-SNAPSHOT</version>
 			<type>jar</type>
 		</dependency>
