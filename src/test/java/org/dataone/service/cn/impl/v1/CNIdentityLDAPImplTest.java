@@ -9,6 +9,7 @@ import static org.junit.Assert.fail;
 import org.dataone.client.D1Client;
 import org.dataone.configuration.Settings;
 import org.dataone.service.exceptions.NotAuthorized;
+import org.dataone.service.types.v1.Group;
 import org.dataone.service.types.v1.Node;
 import org.dataone.service.types.v1.NodeType;
 import org.dataone.service.types.v1.Person;
@@ -182,6 +183,10 @@ public class CNIdentityLDAPImplTest {
 
 			Subject groupSubject = new Subject();
 			groupSubject.setValue(groupName);
+			
+			Group group = new Group();
+			group.setGroupName(groupName);
+			group.setSubject(groupSubject);
 
 			// only add the secondary person because p1 is owner (member by default)
 			SubjectList members = new SubjectList();
@@ -200,11 +205,15 @@ public class CNIdentityLDAPImplTest {
 
 			// group
 			Subject retGroup = null;
-			retGroup = identityService.createGroup(getSession(p1), groupSubject);
+			retGroup = identityService.createGroup(getSession(p1), group);
 			assertNotNull(retGroup);
-			check = identityService.addGroupMembers(getSession(p1), groupSubject, members);
+			// add members
+			group.setHasMemberList(members.getSubjectList());
+			check = identityService.updateGroup(getSession(p1), group);
 			assertTrue(check);
-			check = identityService.removeGroupMembers(getSession(p1), groupSubject, members);
+			// remove members
+			group.setHasMemberList(null);
+			check = identityService.updateGroup(getSession(p1), group);
 			assertTrue(check);
 
 			// clean up (this is not required for service to be functioning)
@@ -421,9 +430,14 @@ public class CNIdentityLDAPImplTest {
 
 			Subject groupSubject = new Subject();
 			groupSubject.setValue(groupName);
-
+			
 			SubjectList members = new SubjectList();
 			members.addSubject(person.getSubject());
+			
+			Group group = new Group();
+			group.setSubject(groupSubject);
+			group.setGroupName(groupName);
+			group.setHasMemberList(members.getSubjectList());
 
 			boolean check = false;
 
@@ -432,9 +446,9 @@ public class CNIdentityLDAPImplTest {
 			Subject p = identityService.registerAccount(getSession(subject), person);
 			assertNotNull(p);
 			Subject retGroup = null;
-			retGroup = identityService.createGroup(getSession(subject), groupSubject);
+			retGroup = identityService.createGroup(getSession(subject), group);
 			assertNotNull(retGroup);
-//			check = identityService.addGroupMembers(getSession(subject), groupSubject, members);
+//			check = identityService.updateGroup(getSession(subject), group);
 //			assertTrue(check);
 
 			// check the subjects exist

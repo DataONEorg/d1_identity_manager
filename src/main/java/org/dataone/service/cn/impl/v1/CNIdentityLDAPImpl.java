@@ -39,7 +39,6 @@ import org.dataone.service.types.v1.ServiceMethodRestriction;
 import org.dataone.service.types.v1.Session;
 import org.dataone.service.types.v1.Subject;
 import org.dataone.service.types.v1.SubjectInfo;
-import org.dataone.service.types.v1.SubjectList;
 import org.dataone.service.cn.impl.v1.NodeRegistryService;
 import org.dataone.service.types.v1.NodeList;
 
@@ -72,9 +71,14 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
         public void setBase(String base) {
             this.base = base;
         }
-	public Subject createGroup(Session session, Subject groupName) throws ServiceFailure,
+        
+    @Override    
+	public Subject createGroup(Session session, Group group) throws ServiceFailure,
 			InvalidToken, NotAuthorized, NotImplemented,
 			IdentifierNotUnique {
+
+    	Subject groupName = group.getSubject();
+	    Subject groupAdmin = session.getSubject();
 
 		/* objectClass groupOfUniqueNames....
 		 * MUST ( uniqueMember $ cn )
@@ -85,11 +89,27 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	    objClasses.add("groupOfUniqueNames");
 	    //objClasses.add("d1Group");
 	    Attribute cn = new BasicAttribute("cn", parseAttribute(groupName.getValue(), "cn"));
-	    // use the Subject who creates the group
-	    Subject groupAdmin = session.getSubject();
-	    Attribute owner = new BasicAttribute("owner", groupAdmin.getValue());
-	    // 'uniqueMember' is required
-	    Attribute uniqueMember = new BasicAttribute("uniqueMember", groupAdmin.getValue());
+	    
+	    // the creator is 'owner' by default
+	    Attribute owners = new BasicAttribute("owner");
+	    owners.add(groupAdmin.getValue());
+	    // add all other rightsHolders as 'owner' too
+	    if (group.getRightsHolderList() != null) {
+		    for (Subject rightsHolder: group.getRightsHolderList()) {
+		    	owners.add(rightsHolder.getValue());
+		    }
+	    }
+	    
+	    // 'uniqueMember' is required, so always add the creator
+	    Attribute uniqueMembers = new BasicAttribute("uniqueMember");
+	    uniqueMembers.add(groupAdmin.getValue());
+	    uniqueMembers.add(groupAdmin.getValue());
+	    // add all other members as 'uniqueMembers'
+	    if (group.getHasMemberList() != null) {
+		    for (Subject member: group.getHasMemberList()) {
+		    	uniqueMembers.add(member.getValue());
+		    }
+	    }
 
 	    // the DN for the group
 	    String dn = groupName.getValue();
@@ -99,8 +119,8 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	        Attributes orig = new BasicAttributes();
 	        orig.put(objClasses);
 	        orig.put(cn);
-	        orig.put(uniqueMember);
-	        orig.put(owner);
+	        orig.put(uniqueMembers);
+	        orig.put(owners);
 	        ctx.createSubcontext(dn, orig);
 	        log.debug( "Created group " + dn + ".");
 	    } catch (NameAlreadyBoundException e) {
@@ -117,72 +137,34 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	}
 
 	@Override
-    public boolean addGroupMembers(Session session, Subject groupName, SubjectList members)
+    public boolean updateGroup(Session session, Group group)
     	throws ServiceFailure, InvalidToken, NotAuthorized, NotFound, NotImplemented, InvalidRequest {
 
-    	try {
-
-    		// will throw NotAuthorized if not true
-			boolean canEdit = canEditGroup(session, groupName);
-
-	        // context
-	        DirContext ctx = getContext();
-
-	        // collect all the subjects from groups and people
-	        List<Subject> subjects = members.getSubjectList();
-	        for (Subject subject: subjects) {
-		        // check that they are not already a member
-	        	boolean isMember = this.checkAttribute(groupName.getValue(), "uniqueMember", subject.getValue());
-	        	if (isMember) {
-			        log.warn("Already a member: " + subject.getValue() + " of group: " + groupName.getValue() );
-	        		continue;
-	        	}
-		        // add them as a member
-		        ModificationItem[] mods = new ModificationItem[1];
-		        Attribute mod0 = new BasicAttribute("uniqueMember", subject.getValue());
-		        mods[0] = new ModificationItem(DirContext.ADD_ATTRIBUTE, mod0);
-		        // make the change
-		        ctx.modifyAttributes(groupName.getValue(), mods);
-		        log.debug("Added member: " + subject.getValue() + " to group: " + groupName.getValue() );
-	        }
-	    } catch (NamingException e) {
-	        throw new ServiceFailure("2590", "Could not add group members: " + e.getMessage());
-	    }
+		try {
+    		Subject groupSubject = group.getSubject();
+    		
+    		// will throw NotAuthorized if not true		
+			boolean canEdit = canEditGroup(session, groupSubject);
+			
+			// remove the group
+			this.removeSubject(groupSubject);
+			
+			// recreate the group using the provided input
+			this.createGroup(session, group);
+			
+		} catch (NamingException e) {
+			ServiceFailure sf = new ServiceFailure("2490", "Could not update group: " + e.getMessage());
+			sf.initCause(e);
+			throw sf;
+		} catch (IdentifierNotUnique e) {
+			ServiceFailure sf = new ServiceFailure("2490", "Could not update group: " + e.getMessage());
+			sf.initCause(e);
+			throw sf;
+		}
 
     	return true;
 
     }
-
-	@Override
-    public boolean removeGroupMembers(Session session, Subject groupName, SubjectList members)
-		throws ServiceFailure, InvalidToken, NotAuthorized, NotFound, NotImplemented, InvalidRequest {
-
-		try {
-			
-			// will throw NotAuthorized if not true
-			boolean canEdit = canEditGroup(session, groupName);
-
-	        // context
-	        DirContext ctx = getContext();
-
-	        //collect all the subjects from groups and people
-	        List<Subject> subjects = members.getSubjectList();
-	        for (Subject subject: subjects) {
-		        // remove them as a member
-		        ModificationItem[] mods = new ModificationItem[1];
-		        Attribute mod0 = new BasicAttribute("uniqueMember", subject.getValue());
-		        mods[0] = new ModificationItem(DirContext.REMOVE_ATTRIBUTE, mod0);
-		        // make the change
-		        ctx.modifyAttributes(groupName.getValue(), mods);
-		        log.debug("Removed member: " + subject.getValue() + " from group: " + groupName.getValue() );
-	        }
-	    } catch (NamingException e) {
-	        throw new ServiceFailure("2690", "Could not remove group members: " + e.getMessage());
-	    }
-
-		return true;
-
-	}
 	
 	private boolean canEditGroup(Session session, Subject groupName) throws NamingException, NotAuthorized {
 		// check that they have admin rights for group
