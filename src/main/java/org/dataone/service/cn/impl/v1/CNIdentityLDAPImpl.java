@@ -994,7 +994,15 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		
 		// CN should see unredacted list
 		if (session != null) {
-                    NodeList nodeList = nodeRegistryService.listNodes();
+            // first check locally
+			NodeList nodeList = null;
+			try {
+				nodeList = nodeRegistryService.listNodes();
+			} catch (Exception e) {
+				// probably don't have it set up locally, defer to CN via client
+				log.warn("Using D1Client to look up nodeList from CN");
+				nodeList = D1Client.getCN().listNodes();
+			}
 			for (Node node: nodeList.getNodeList()) {
 				if (node.getType().equals(NodeType.CN)) {
 					for (Subject subject: node.getSubjectList()) {
