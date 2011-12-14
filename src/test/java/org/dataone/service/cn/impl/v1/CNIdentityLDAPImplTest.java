@@ -6,7 +6,11 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import org.dataone.client.D1Client;
 import org.dataone.configuration.Settings;
+import org.dataone.service.exceptions.NotAuthorized;
+import org.dataone.service.types.v1.Node;
+import org.dataone.service.types.v1.NodeType;
 import org.dataone.service.types.v1.Person;
 import org.dataone.service.types.v1.Session;
 import org.dataone.service.types.v1.Subject;
@@ -219,7 +223,7 @@ public class CNIdentityLDAPImplTest {
     }
 
 	@Test
-	public void mapIdentity()  {
+	public void mapIdentityTwoWay()  {
 
 		try {
 			Subject p1 = new Subject();
@@ -452,6 +456,76 @@ public class CNIdentityLDAPImplTest {
 			fail();
 		}
 
+	}
+
+	@Test
+	public void mapIdentity()  {
+	
+		try {
+			Subject p1 = new Subject();
+			p1.setValue(primarySubject);
+			Person person1 = new Person();
+			person1.setSubject(p1);
+			person1.setFamilyName("test1");
+			person1.addGivenName("test1");
+			person1.addEmail("test1@dataone.org");
+	
+			Subject p2 = new Subject();
+			p2.setValue(secondarySubject);
+			Person person2 = new Person();
+			person2.setSubject(p2);
+			person2.setFamilyName("test2");
+			person2.addGivenName("test2");
+			person2.addEmail("test2@dataone.org");
+	
+			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
+			identityService.setServer(server);
+			boolean check = false;
+	
+			// create subjects
+			Subject subject = identityService.registerAccount(getSession(p1), person1);
+			assertNotNull(subject);
+			subject = identityService.registerAccount(getSession(p2), person2);
+			assertNotNull(subject);
+	
+			// map p1 to p2, as non admin
+			try {
+				check = identityService.mapIdentity(getSession(p1), p1, p2);
+			} catch (NotAuthorized na) {
+				// expected this
+				assertTrue(true);
+				check = false;
+			}
+			assertFalse(check);
+			
+			// try as the CN
+			Subject cnSubject = null;
+			for (Node node: D1Client.getCN().listNodes().getNodeList()) {
+				if (node.getType().equals(NodeType.CN)) {
+					cnSubject = node.getSubject(0);
+					break;
+				}
+			}
+			check = identityService.mapIdentity(getSession(cnSubject ), p1, p2);
+			assertTrue(check);
+	
+			// check mapping
+			check = identityService.checkAttribute(p1.getValue(), "equivalentIdentity", p2.getValue());
+			assertTrue(check);
+			check = identityService.checkAttribute(p2.getValue(), "equivalentIdentity", p1.getValue());
+			assertTrue(check);
+	
+			// clean up (this is not required for service to be functioning)
+			check = identityService.removeSubject(p1);
+			assertTrue(check);
+			check = identityService.removeSubject(p2);
+			assertTrue(check);
+	
+		} catch (Exception e) {
+			e.printStackTrace();
+			fail();
+		}
+	
 	}
 
 }

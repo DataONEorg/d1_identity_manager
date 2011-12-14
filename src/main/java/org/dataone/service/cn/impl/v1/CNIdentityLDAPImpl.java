@@ -34,11 +34,12 @@ import org.dataone.service.types.v1.Group;
 import org.dataone.service.types.v1.Node;
 import org.dataone.service.types.v1.NodeType;
 import org.dataone.service.types.v1.Person;
+import org.dataone.service.types.v1.Service;
+import org.dataone.service.types.v1.ServiceMethodRestriction;
 import org.dataone.service.types.v1.Session;
 import org.dataone.service.types.v1.Subject;
 import org.dataone.service.types.v1.SubjectInfo;
 import org.dataone.service.types.v1.SubjectList;
-import org.dataone.service.util.Constants;
 import org.dataone.service.cn.impl.v1.NodeRegistryService;
 import org.dataone.service.types.v1.NodeList;
 
@@ -206,6 +207,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
         List<Object> owners = this.getAttributeValues(groupName.getValue(), "owner");
  
         // do any of our subjects match the owners?
+        ownerSearch:
         for (Subject user: sessionSubjects) {
 	        String userDN = CertificateManager.getInstance().standardizeDN(user.getValue());
 	        for (Object ownerObj: owners) {
@@ -213,14 +215,10 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	        	owner = CertificateManager.getInstance().standardizeDN(owner);
 	        	if (userDN.equals(owner)) {
 	        		canEdit = true;
-	        		break;
+	        		break ownerSearch;
 	        	}
 	        }
-	        // get out of the loop if we can
-	        if (canEdit) {
-	        	break;
-	        }
-        }
+	    }
         
         // throw exception if not authorized
         if (!canEdit) {
@@ -239,24 +237,41 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
         boolean isAllowed = false;
         Subject sessionSubject = null;
 
-        // TODO: check for admin user (MN?) in the Session object
-        isAllowed = true;
-//        sessionSubject = session.getSubject();
-//        for (Node node: D1Client.getCN().listNodes().getNodeList()) {
-//        	for (Subject nodeSubject: node.getSubjectList()) {
-//        		if (nodeSubject.getValue().equals(sessionSubject.getValue())) {
-//        			isAllowed = true;
-//        			break;
-//        		}
-//        	}
-//        	// get out of the loop if we already now we can
-//        	if (isAllowed) {
-//        		break;
-//        	}
-//        }
-//        if (!isAllowed) {
-//        	throw new NotAuthorized("2360", sessionSubject.getValue() + " is not allowed to map identities");
-//        }
+        // checks if we are allowed to call this method -- should be very restricted
+        isAllowed = false;
+        List<Node> nodeList = D1Client.getCN().listNodes().getNodeList();
+        sessionSubject = session.getSubject();
+        // labeled break gets us out as soon as there's a match
+        subjectSearch:
+        for (Node node: nodeList) {
+        	for (Subject nodeSubject: node.getSubjectList()) {
+        		if (nodeSubject.equals(sessionSubject)) {
+        			if (node.getType().equals(NodeType.CN)) {
+        				// the CN is always allowed
+        				isAllowed = true;
+            			break subjectSearch;
+        			}
+        			// check if it's in the service method allowed list
+                	for (Service service: node.getServices().getServiceList()) {
+                		if (service.getName().equals("CNIdentity")) {
+	                		for (ServiceMethodRestriction restriction: service.getRestrictionList()) {
+	                			if (restriction.getMethodName().equals("mapIdentity")) {
+	                				for (Subject restrictedSubject: restriction.getSubjectList()) {
+	                					if (restrictedSubject.equals(sessionSubject)) {
+	                						isAllowed = true;
+	                						break subjectSearch;
+	                					}
+	                				}
+	                			}
+	                		}
+                		}
+                	}
+        		}
+        	}	        	        	        	
+        }
+        if (!isAllowed) {
+        	throw new NotAuthorized("2360", sessionSubject.getValue() + " is not allowed to map identities");
+        }
         
         // check for pre-existing mapping
         boolean mappingExists =
