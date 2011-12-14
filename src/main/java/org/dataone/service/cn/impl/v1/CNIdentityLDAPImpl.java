@@ -1,5 +1,6 @@
 package org.dataone.service.cn.impl.v1;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.naming.NameAlreadyBoundException;
@@ -185,20 +186,45 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	private boolean canEditGroup(Session session, Subject groupName) throws NamingException, NotAuthorized {
 		// check that they have admin rights for group
         boolean canEdit = false;
-        Subject user = session.getSubject();
-        String userDN = CertificateManager.getInstance().standardizeDN(user.getValue());
-        List<Object> owners = this.getAttributeValues(groupName.getValue(), "owner");
-        for (Object ownerObj: owners) {
-        	String owner = (String) ownerObj;
-        	owner = CertificateManager.getInstance().standardizeDN(owner);
-        	if (userDN.equals(owner)) {
-        		canEdit = true;
-        		break;
+        // collect all equivalent IDs for this session
+        List<Subject> sessionSubjects = new ArrayList<Subject>();
+        sessionSubjects.add(session.getSubject());
+        // equivalent people
+        if (session.getSubjectInfo() != null && session.getSubjectInfo().getPersonList() != null) {
+        	for (Person p: session.getSubjectInfo().getPersonList()) {
+        		sessionSubjects.add(p.getSubject());
         	}
         }
+        // group membership
+        if (session.getSubjectInfo() != null && session.getSubjectInfo().getGroupList() != null) {
+        	for (Group g: session.getSubjectInfo().getGroupList()) {
+        		sessionSubjects.add(g.getSubject());
+        	}
+        }
+ 
+        // find the admin list of the group
+        List<Object> owners = this.getAttributeValues(groupName.getValue(), "owner");
+ 
+        // do any of our subjects match the owners?
+        for (Subject user: sessionSubjects) {
+	        String userDN = CertificateManager.getInstance().standardizeDN(user.getValue());
+	        for (Object ownerObj: owners) {
+	        	String owner = (String) ownerObj;
+	        	owner = CertificateManager.getInstance().standardizeDN(owner);
+	        	if (userDN.equals(owner)) {
+	        		canEdit = true;
+	        		break;
+	        	}
+	        }
+	        // get out of the loop if we can
+	        if (canEdit) {
+	        	break;
+	        }
+        }
         
+        // throw exception if not authorized
         if (!canEdit) {
-        	throw new NotAuthorized("2560", "Subject not in owner list: " + userDN);
+        	throw new NotAuthorized("2560", "Subject not in owner list for group");
         }
         
         return canEdit;
