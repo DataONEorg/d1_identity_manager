@@ -400,7 +400,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 
 	@Override
 	public Subject updateAccount(Session session, Person p) throws ServiceFailure,
-		IdentifierNotUnique, InvalidCredentials, NotImplemented, InvalidRequest {
+		InvalidCredentials, NotImplemented, InvalidRequest {
 
 		Subject subject = p.getSubject();
 
@@ -899,7 +899,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	@Override
 	public boolean denyMapIdentity(Session session, Subject secondarySubject)
 			throws ServiceFailure, InvalidToken, NotAuthorized, NotFound,
-			NotImplemented, InvalidRequest {
+			NotImplemented {
 		try {
 			// primary subject in the session
 			Subject primarySubject = session.getSubject();
@@ -935,7 +935,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	@Override
 	public SubjectInfo getPendingMapIdentity(Session session, Subject subject)
 			throws ServiceFailure, InvalidToken, NotAuthorized, NotFound,
-			NotImplemented, InvalidRequest {
+			NotImplemented {
 		
 		// check redaction policy
 		boolean redact = isUnredacted(session);
@@ -961,7 +961,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	@Override
 	public boolean removeMapIdentity(Session session, Subject secondarySubject)
 			throws ServiceFailure, InvalidToken, NotAuthorized, NotFound,
-			NotImplemented, InvalidRequest {
+			NotImplemented {
 		
 		try {
 			// primary subject in the session
