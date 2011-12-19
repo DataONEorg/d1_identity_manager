@@ -239,16 +239,20 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
         		// check if it's in the service method allowed list
             	for (Service service: node.getServices().getServiceList()) {
             		if (service.getName().equals("CNIdentity")) {
-                		for (ServiceMethodRestriction restriction: service.getRestrictionList()) {
-                			if (restriction.getMethodName().equals("mapIdentity")) {
-                				for (Subject restrictedSubject: restriction.getSubjectList()) {
-                					if (restrictedSubject.equals(sessionSubject)) {
-                						isAllowed = true;
-                						break subjectSearch;
-                					}
-                				}
-                			}
-                		}
+            			if (service.getRestrictionList() != null) {
+	                		for (ServiceMethodRestriction restriction: service.getRestrictionList()) {
+	                			if (restriction.getMethodName().equals("mapIdentity")) {
+	                				if (restriction.getSubjectList() != null) {
+		                				for (Subject restrictedSubject: restriction.getSubjectList()) {
+		                					if (restrictedSubject.equals(sessionSubject)) {
+		                						isAllowed = true;
+		                						break subjectSearch;
+		                					}
+		                				}
+	                				}
+	                			}
+	                		}
+            			}
             		}
             	}
         	}
