@@ -221,12 +221,29 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 
         // checks if we are allowed to call this method -- should be very restricted
         isAllowed = false;
-        List<Node> nodeList = D1Client.getCN().listNodes().getNodeList();
+        List<Node> nodeList = new ArrayList<Node>();
+        try {
+                nodeList = nodeRegistryService.listNodes().getNodeList();
+        } catch (Exception e) {
+                // probably don't have it set up locally, defer to CN via client
+                // XXX, it should be set up locally, this code will never
+                // execute outside the context of a running local instance of a CN
+                //  a client connection from a CN to itself should not be considered
+                // an option.  This  piece of code  convinces me that
+                // d1_identity_manager is no longer a viable independent component and should
+                // be intergrated & combined with d1_cn_noderegistry inside
+                // of the d1_cn_common package
+                log.warn("Using D1Client to look up nodeList from CN");
+                nodeList = D1Client.getCN().listNodes().getNodeList();
+        }
         sessionSubject = session.getSubject();
+        log.info(sessionSubject.getValue());
         // labeled break gets us out as soon as there's a match
         subjectSearch:
         for (Node node: nodeList) {
+                log.info(node.getIdentifier().getValue());
         	for (Subject nodeSubject: node.getSubjectList()) {
+                    log.info(nodeSubject.getValue());
         		if (nodeSubject.equals(sessionSubject)) {
         			if (node.getType().equals(NodeType.CN)) {
         				// the CN is always allowed
@@ -238,12 +255,15 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
         	if (node.getType().equals(NodeType.CN)) {
         		// check if it's in the service method allowed list
             	for (Service service: node.getServices().getServiceList()) {
+                    log.info(service.getName());
             		if (service.getName().equals("CNIdentity")) {
             			if (service.getRestrictionList() != null) {
 	                		for (ServiceMethodRestriction restriction: service.getRestrictionList()) {
+                                            log.info(restriction.getMethodName());
 	                			if (restriction.getMethodName().equals("mapIdentity")) {
 	                				if (restriction.getSubjectList() != null) {
 		                				for (Subject restrictedSubject: restriction.getSubjectList()) {
+                                                                    log.info(restrictedSubject.getValue());
 		                					if (restrictedSubject.equals(sessionSubject)) {
 		                						isAllowed = true;
 		                						break subjectSearch;
@@ -1013,6 +1033,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		    }
 
 		} catch (Exception e) {
+                    e.printStackTrace();
 	    	throw new ServiceFailure("2390", "Could not remove identity mapping: " + e.getMessage());
 		}
 
