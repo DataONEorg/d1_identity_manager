@@ -6,7 +6,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import org.dataone.client.D1Client;
 import org.dataone.configuration.Settings;
 import org.dataone.service.exceptions.NotAuthorized;
 import org.dataone.service.types.v1.Group;
@@ -21,6 +20,12 @@ import org.junit.After;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import org.dataone.service.types.v1.NodeReference;
+import java.io.InputStream;
+import java.io.ByteArrayInputStream;
+import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
+import org.dataone.service.util.TypeMarshaller;
 /**
  *
  * @author leinfelder
@@ -28,8 +33,8 @@ import org.junit.Test;
 public class CNIdentityLDAPImplTest {
 
 	// use Configuration to look up testing values
-	private String server = Settings.getConfiguration().getString("test.ldap.server.1");
-	private String serverReplica = Settings.getConfiguration().getString("test.ldap.server.1");
+//	private String server = Settings.getConfiguration().getString("test.ldap.server.1");
+//	private String serverReplica = Settings.getConfiguration().getString("test.ldap.server.1");
 	private int replicationDelay = Settings.getConfiguration().getInt("test.replicationDelay"); // milliseconds
 	private int replicationAttempts = Settings.getConfiguration().getInt("test.replicationAttempts");
 
@@ -37,6 +42,8 @@ public class CNIdentityLDAPImplTest {
 	private String secondarySubject = Settings.getConfiguration().getString("test.secondarySubject");
 	private String groupName = Settings.getConfiguration().getString("test.groupName");
 
+        final static int SIZE = 16384;
+        
 	private static Session getSession(Subject subject) {
 		Session session = new Session();
 		session.setSubject(subject);
@@ -50,7 +57,7 @@ public class CNIdentityLDAPImplTest {
 	@After
 	public void cleanUp() {
 		CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
-		identityService.setServer(server);
+//		identityService.setServer(server);
 		try {
 			identityService.removeEntry(primarySubject);
 		} catch (Exception e) {
@@ -84,14 +91,14 @@ public class CNIdentityLDAPImplTest {
 			person.addEmail("test1@dataone.org");
 
 			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
-			identityService.setServer(server);
+//			identityService.setServer(server);
 			Subject p = identityService.registerAccount(getSession(subject), person);
 			assertNotNull(p);
 
 			boolean check = false;
 			int count = 0;
 			// check it on the other server
-			identityService.setServer(serverReplica);
+//			identityService.setServer(serverReplica);
 			while (!check) {
 				// wait for replication to occur
 				Thread.sleep(replicationDelay);
@@ -104,7 +111,7 @@ public class CNIdentityLDAPImplTest {
 			assertTrue(check);
 
 			//clean up
-			identityService.setServer(server);
+//			identityService.setServer(server);
 			check = identityService.removeSubject(p);
 			assertTrue(check);
 
@@ -130,14 +137,14 @@ public class CNIdentityLDAPImplTest {
 			person.addEmail("test1@dataone.org");
 
 			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
-			identityService.setServer(serverReplica);
+//			identityService.setServer(serverReplica);
 			Subject p = identityService.registerAccount(getSession(subject), person);
 			assertNotNull(p);
 
 			boolean check = false;
 			int count = 0;
 			// check it on the server
-			identityService.setServer(server);
+//			identityService.setServer(server);
 			while (!check) {
 				// wait for replication to occur
 				Thread.sleep(replicationDelay);
@@ -150,7 +157,7 @@ public class CNIdentityLDAPImplTest {
 			assertTrue(check);
 
 			//clean up
-			identityService.setServer(serverReplica);
+//			identityService.setServer(serverReplica);
 			check = identityService.removeSubject(p);
 			assertTrue(check);
 
@@ -194,7 +201,7 @@ public class CNIdentityLDAPImplTest {
 			members.addSubject(person2.getSubject());
 
 			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
-			identityService.setServer(server);
+//			identityService.setServer(server);
 			boolean check = false;
 
 			// create subjects
@@ -232,9 +239,29 @@ public class CNIdentityLDAPImplTest {
     }
 
 	@Test
-	public void mapIdentityTwoWay()  {
-
+	public void mapIdentityTwoWay()  throws Exception  {
+            NodeRegistryService nodeRegistryService = new NodeRegistryService();
 		try {
+                    
+                    ByteArrayOutputStream cnNodeOutput = new ByteArrayOutputStream();
+
+                    InputStream is = this.getClass().getResourceAsStream("/org/dataone/resources/samples/v1/cnNode.xml");
+
+                    BufferedInputStream bInputStream = new BufferedInputStream(is);
+                    byte[] barray = new byte[SIZE];
+                    int nRead = 0;
+                    while ((nRead = bInputStream.read(barray, 0, SIZE)) != -1) {
+                        cnNodeOutput.write(barray, 0, nRead);
+                    }
+                    bInputStream.close();
+                    ByteArrayInputStream bArrayInputStream = new ByteArrayInputStream(cnNodeOutput.toByteArray());
+                    Node testCNNode = TypeMarshaller.unmarshalTypeFromStream(Node.class, bArrayInputStream);
+
+                    NodeReference cnNodeReference = nodeRegistryService.register(testCNNode);
+                    assertNotNull(cnNodeReference);
+                    testCNNode.setIdentifier(cnNodeReference);
+                    nodeRegistryService.approveNode(cnNodeReference);
+
 			Subject p1 = new Subject();
 			p1.setValue(primarySubject);
 			Person person1 = new Person();
@@ -252,7 +279,7 @@ public class CNIdentityLDAPImplTest {
 			person2.addEmail("test2@dataone.org");
 
 			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
-			identityService.setServer(server);
+//			identityService.setServer(server);
 			boolean check = false;
 
 			// create subjects
@@ -290,7 +317,8 @@ public class CNIdentityLDAPImplTest {
 			assertTrue(check);
 			check = identityService.removeSubject(p2);
 			assertTrue(check);
-
+                        nodeRegistryService.deleteNode(cnNodeReference);
+                        
 		} catch (Exception e) {
 			e.printStackTrace();
 			fail();
@@ -311,7 +339,7 @@ public class CNIdentityLDAPImplTest {
 			//person.addEmail("test1@dataone.org");
 
 			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
-			identityService.setServer(server);
+//			identityService.setServer(server);
 			Subject p = identityService.registerAccount(getSession(subject), person);
 			assertNotNull(p);
 
@@ -346,7 +374,7 @@ public class CNIdentityLDAPImplTest {
 			person.addEmail("test1@dataone.org");
 
 			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
-			identityService.setServer(server);
+//			identityService.setServer(server);
 			Subject p = identityService.registerAccount(getSession(subject), person);
 			assertNotNull(p);
 
@@ -391,7 +419,7 @@ public class CNIdentityLDAPImplTest {
 			person.addEmail(email);
 
 			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
-			identityService.setServer(server);
+//			identityService.setServer(server);
 			Subject p = identityService.registerAccount(getSession(subject), person);
 			assertNotNull(p);
 
@@ -442,7 +470,7 @@ public class CNIdentityLDAPImplTest {
 			boolean check = false;
 
 			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
-			identityService.setServer(server);
+//			identityService.setServer(server);
 			Subject p = identityService.registerAccount(getSession(subject), person);
 			assertNotNull(p);
 			Subject retGroup = null;
@@ -453,12 +481,23 @@ public class CNIdentityLDAPImplTest {
 
 			// check the subjects exist
 			SubjectInfo subjectInfo = identityService.listSubjects(getSession(subject), null, null, 0, -1);
-			assertNotNull(subjectInfo);
-			check = subjectInfo.getPerson(0).getEmail(0).equalsIgnoreCase(email);
-			assertTrue(check);
-			check = subjectInfo.getGroup(0).getSubject().getValue().equalsIgnoreCase(groupName);
-			assertTrue(check);
-
+                        assertNotNull(subjectInfo);
+                        boolean personCheck = false;
+                        for (Person checkPerson : subjectInfo.getPersonList()) {
+                            if (checkPerson.getFamilyName().equals("test1")) {
+                                personCheck = true;
+                                check = checkPerson.getEmail(0).equalsIgnoreCase(email);
+                                assertTrue(check);
+                            }
+                        }
+                        assertNotNull(personCheck);
+                        boolean groupCheck = false;
+                        for (Group checkGroup : subjectInfo.getGroupList()) {
+                            if (checkGroup.getGroupName().equals(groupName)) {
+                             groupCheck = true;
+                            }
+                        }
+                        assertNotNull(groupCheck);
 			//clean up
 			check = identityService.removeSubject(p);
 			assertTrue(check);
@@ -473,9 +512,29 @@ public class CNIdentityLDAPImplTest {
 	}
 
 	@Test
-	public void mapIdentity()  {
-	
+	public void mapIdentity() throws Exception  {
+
 		try {
+	            NodeRegistryService nodeRegistryService = new NodeRegistryService();
+
+                    ByteArrayOutputStream cnNodeOutput = new ByteArrayOutputStream();
+
+                    InputStream is = this.getClass().getResourceAsStream("/org/dataone/resources/samples/v1/cnNode.xml");
+
+                    BufferedInputStream bInputStream = new BufferedInputStream(is);
+                    byte[] barray = new byte[SIZE];
+                    int nRead = 0;
+                    while ((nRead = bInputStream.read(barray, 0, SIZE)) != -1) {
+                        cnNodeOutput.write(barray, 0, nRead);
+                    }
+                    bInputStream.close();
+                    ByteArrayInputStream bArrayInputStream = new ByteArrayInputStream(cnNodeOutput.toByteArray());
+                    Node testCNNode = TypeMarshaller.unmarshalTypeFromStream(Node.class, bArrayInputStream);
+
+                    NodeReference cnNodeReference = nodeRegistryService.register(testCNNode);
+                    assertNotNull(cnNodeReference);
+                    testCNNode.setIdentifier(cnNodeReference);
+                    nodeRegistryService.approveNode(cnNodeReference);
 			Subject p1 = new Subject();
 			p1.setValue(primarySubject);
 			Person person1 = new Person();
@@ -493,7 +552,7 @@ public class CNIdentityLDAPImplTest {
 			person2.addEmail("test2@dataone.org");
 	
 			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
-			identityService.setServer(server);
+//			identityService.setServer(server);
 			boolean check = false;
 	
 			// create subjects
@@ -513,13 +572,7 @@ public class CNIdentityLDAPImplTest {
 			assertFalse(check);
 			
 			// try as the CN
-			Subject cnSubject = null;
-			for (Node node: D1Client.getCN().listNodes().getNodeList()) {
-				if (node.getType().equals(NodeType.CN)) {
-					cnSubject = node.getSubject(0);
-					break;
-				}
-			}
+			Subject cnSubject = testCNNode.getSubject(0);
 			check = identityService.mapIdentity(getSession(cnSubject ), p1, p2);
 			assertTrue(check);
 	
@@ -534,7 +587,7 @@ public class CNIdentityLDAPImplTest {
 			assertTrue(check);
 			check = identityService.removeSubject(p2);
 			assertTrue(check);
-	
+                        nodeRegistryService.deleteNode(cnNodeReference);
 		} catch (Exception e) {
 			e.printStackTrace();
 			fail();

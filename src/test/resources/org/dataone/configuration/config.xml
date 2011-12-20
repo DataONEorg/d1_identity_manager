@@ -3,4 +3,5 @@
 <configuration>
 	<properties fileName="identity.test.properties"/>
         <properties fileName="registryLdap.properties"/>
+        <properties fileName="ldapService.properties"/>
 </configuration>
