@@ -34,13 +34,12 @@ import org.dataone.service.types.v1.Group;
 import org.dataone.service.types.v1.Node;
 import org.dataone.service.types.v1.NodeType;
 import org.dataone.service.types.v1.Person;
-import org.dataone.service.types.v1.Service;
-import org.dataone.service.types.v1.ServiceMethodRestriction;
 import org.dataone.service.types.v1.Session;
 import org.dataone.service.types.v1.Subject;
 import org.dataone.service.types.v1.SubjectInfo;
 import org.dataone.service.cn.impl.v1.NodeRegistryService;
 import org.dataone.service.types.v1.NodeList;
+import org.dataone.service.types.v1.util.ServiceMethodRestrictionUtil;
 
 /**
  * Proposed LDAP schema extensions
@@ -220,10 +219,9 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
         Subject sessionSubject = null;
 
         // checks if we are allowed to call this method -- should be very restricted
-        isAllowed = false;
-        List<Node> nodeList = new ArrayList<Node>();
+        List<Node> nodeList = null;
         try {
-                nodeList = nodeRegistryService.listNodes().getNodeList();
+        	nodeList = nodeRegistryService.listNodes().getNodeList();
         } catch (Exception e) {
                 // probably don't have it set up locally, defer to CN via client
                 // XXX, it should be set up locally, this code will never
@@ -236,47 +234,9 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
                 log.warn("Using D1Client to look up nodeList from CN");
                 nodeList = D1Client.getCN().listNodes().getNodeList();
         }
+        
         sessionSubject = session.getSubject();
-        log.info(sessionSubject.getValue());
-        // labeled break gets us out as soon as there's a match
-        subjectSearch:
-        for (Node node: nodeList) {
-                log.info(node.getIdentifier().getValue());
-        	for (Subject nodeSubject: node.getSubjectList()) {
-                    log.info(nodeSubject.getValue());
-        		if (nodeSubject.equals(sessionSubject)) {
-        			if (node.getType().equals(NodeType.CN)) {
-        				// the CN is always allowed
-        				isAllowed = true;
-            			break subjectSearch;
-        			}
-        		}
-        	}
-        	if (node.getType().equals(NodeType.CN)) {
-        		// check if it's in the service method allowed list
-            	for (Service service: node.getServices().getServiceList()) {
-                    log.info(service.getName());
-            		if (service.getName().equals("CNIdentity")) {
-            			if (service.getRestrictionList() != null) {
-	                		for (ServiceMethodRestriction restriction: service.getRestrictionList()) {
-                                            log.info(restriction.getMethodName());
-	                			if (restriction.getMethodName().equals("mapIdentity")) {
-	                				if (restriction.getSubjectList() != null) {
-		                				for (Subject restrictedSubject: restriction.getSubjectList()) {
-                                                                    log.info(restrictedSubject.getValue());
-		                					if (restrictedSubject.equals(sessionSubject)) {
-		                						isAllowed = true;
-		                						break subjectSearch;
-		                					}
-		                				}
-	                				}
-	                			}
-	                		}
-            			}
-            		}
-            	}
-        	}
-        }
+        isAllowed = ServiceMethodRestrictionUtil.isMethodAllowed(sessionSubject, nodeList, "CNIdentity", "mapIdentity");
         if (!isAllowed) {
         	throw new NotAuthorized("2360", sessionSubject.getValue() + " is not allowed to map identities");
         }
