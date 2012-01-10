@@ -563,6 +563,53 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		return subjectInfo;
 	}
 
+	/**
+	 * Given a Person, we need to find which Groups it is a member of
+	 * @param personDn the Person dn for which we need membership information
+	 * @return list of Groups the person belongs to
+	 * @throws ServiceFailure
+	 */
+	protected List<Group> lookupGroups(String personDn) throws ServiceFailure {
+
+		// check redaction policy
+		boolean redact = false;
+		
+		SubjectInfo pList = new SubjectInfo();
+		try {
+			DirContext ctx = getContext();
+			SearchControls ctls = new SearchControls();
+		    ctls.setSearchScope(SearchControls.SUBTREE_SCOPE);
+
+		    // search for all groups with the member subject
+		    String searchCriteria = "(&(objectClass=groupOfUniqueNames)(uniqueMember=" + personDn + ")";
+
+	        NamingEnumeration<SearchResult> results =
+	            ctx.search(base, searchCriteria, ctls);
+
+	        while (results != null && results.hasMore()) {
+	            SearchResult si = results.next();
+	            String dn = si.getNameInNamespace();
+	            log.debug("Search result found for: " + dn);
+	            Attributes attrs = si.getAttributes();
+	            // DO NOT look up other details about matching Groups or Persons, nor include equivalentIdentity requests
+	            SubjectInfo resultList = processAttributes(dn, attrs, false, false, redact);
+                if (resultList != null) {
+                	// add groups
+	                for (Group group: resultList.getGroupList()) {
+		                pList.addGroup(group);
+	                }
+                }
+	        }
+
+	    } catch (Exception e) {
+	    	String msg = "Problem looking up group membership at base: " + base + " : " + e.getMessage();
+	    	log.error(msg, e);
+	    	throw new ServiceFailure("2290", msg);
+	    }
+
+	    return pList.getGroupList();
+	}
+	
 	// TODO: use query and start/count params
 	@Override
 	public SubjectInfo listSubjects(Session session, String query, String status, Integer start,
@@ -841,35 +888,15 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 						}
 					}
 					
-					// TODO: store in person, or only in group entry?
-					if (attributeName.equalsIgnoreCase("memberOf")) {
-						items = (NamingEnumeration<String>) attribute.getAll();
-						while (items.hasMore()) {
-							attributeValue = items.next();
-							Subject group = new Subject();
-							group.setValue(attributeValue);
-							person.addIsMemberOf(group);
-							log.debug("Found attribute: " + attributeName + "=" + attributeValue);
-							// look up details for this Group?
-							if (recurse) {
-								// only one level of recursion
-								SubjectInfo groupInfo = this.getSubjectInfo(null, group, false);
-								if (groupInfo.getGroupList() != null) {
-									for (Group g: groupInfo.getGroupList()) {
-										pList.addGroup(g);
-									}
-								}
-								// NOTE: this does not make sense to include other members
-								// has members?
-	//							if (groupInfo.getPersonList() != null) {
-	//								for (Person p: groupInfo.getPersonList()) {
-	//									pList.addPerson(p);
-	//								}
-	//							}
-							}
-						}
-					}
 				}
+				
+				// group membership
+				List<Group> groups = lookupGroups(name);
+				for (Group g: groups) {
+					person.addIsMemberOf(g.getSubject());
+					pList.addGroup(g);
+				}
+				
 				// add as the first one in the list
 				pList.getPersonList().add(0, person);
 			}
