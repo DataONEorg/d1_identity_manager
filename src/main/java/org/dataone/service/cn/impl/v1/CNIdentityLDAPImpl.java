@@ -581,7 +581,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		    ctls.setSearchScope(SearchControls.SUBTREE_SCOPE);
 
 		    // search for all groups with the member subject
-		    String searchCriteria = "(&(objectClass=groupOfUniqueNames)(uniqueMember=" + personDn + ")";
+		    String searchCriteria = "(&(objectClass=groupOfUniqueNames)(uniqueMember=" + personDn + "))";
 
 	        NamingEnumeration<SearchResult> results =
 	            ctx.search(base, searchCriteria, ctls);
