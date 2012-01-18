@@ -8,6 +8,8 @@ import static org.junit.Assert.fail;
 
 import javax.naming.NamingException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.dataone.configuration.Settings;
 import org.dataone.service.exceptions.IdentifierNotUnique;
 import org.dataone.service.types.v1.Identifier;
@@ -21,6 +23,8 @@ import org.junit.Test;
  * @author leinfelder
  */
 public class ReserveIdentifierServiceTest {
+
+    public static Log log = LogFactory.getLog(ReserveIdentifierServiceTest.class);
 
 	// use Configuration to look up testing values
 	private String server = Settings.getConfiguration().getString("test.ldap.server.1");
@@ -98,5 +102,47 @@ public class ReserveIdentifierServiceTest {
 		}
 	}
 
+    @Test
+    public void generateIdentifier()  {
+
+        try {
+
+            ReserveIdentifierService service = new ReserveIdentifierService();
+
+            // subject
+            Subject subject = new Subject();
+            subject.setValue(primarySubject);
+
+            // another subject
+            Subject anotherSubject = new Subject();
+            anotherSubject.setValue(secondarySubject);
+
+            // identifier
+            Identifier pid = new Identifier();
+            pid.setValue("test");
+
+            boolean check = false;
+
+            Identifier retPid = null;
+            service.setServer(server);
+            retPid = service.generateIdentifier(getSession(subject), "UUID", null);
+            log.debug("Generated PID: " + retPid.getValue());
+            assertNotNull(retPid);
+            assertTrue(retPid.getValue().startsWith("urn:uuid:"));
+
+            // check that he still have the reservation
+            check = service.hasReservation(getSession(subject), retPid);
+            assertTrue(check);
+
+            // now clean up
+            check = service.removeReservation(getSession(subject), retPid);
+            assertTrue(check);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            fail();
+        }
+
+    }
 
 }
