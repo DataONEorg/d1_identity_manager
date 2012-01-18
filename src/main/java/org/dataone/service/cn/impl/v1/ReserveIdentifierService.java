@@ -8,6 +8,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.UUID;
 
 import javax.naming.NameAlreadyBoundException;
 import javax.naming.NamingEnumeration;
@@ -22,15 +23,16 @@ import javax.naming.directory.SearchResult;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.dataone.cn.ldap.LDAPService;
 import org.dataone.configuration.Settings;
 import org.dataone.service.exceptions.IdentifierNotUnique;
+import org.dataone.service.exceptions.InvalidRequest;
 import org.dataone.service.exceptions.NotAuthorized;
 import org.dataone.service.exceptions.NotFound;
-
+import org.dataone.service.exceptions.ServiceFailure;
 import org.dataone.service.types.v1.Identifier;
 import org.dataone.service.types.v1.Session;
 import org.dataone.service.types.v1.Subject;
-import org.dataone.cn.ldap.LDAPService;
 
 /**
  * Class used for adding and managing reserved Identifiers
@@ -46,15 +48,22 @@ public class ReserveIdentifierService extends LDAPService {
 	private static SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMddHHmmss'Z'");
 
 	private static Timer timer = null;
+	
+	private static final String UUID_ID = "UUID";
+	private static final String DOI = "DOI";
+	private static final String ARK = "ARK";
+    private static final int MAX_RETRY = 10;
 
 	public ReserveIdentifierService() {
 		// we need to use a different base for the ids
 		this.setBase(Settings.getConfiguration().getString("reserveIdentifier.ldap.base"));
 	}
-        @Override
-        public void setBase(String base) {
-            this.base = base;
-        }
+	
+	@Override
+	public void setBase(String base) {
+	    this.base = base;
+	}
+	
 	/**
 	 * Reserves the given Identifier for the Subject in the Session
 	 * Checks ownership of the pid by the subject if it already exists
@@ -86,6 +95,65 @@ public class ReserveIdentifierService extends LDAPService {
 		boolean result = addEntry(subject, pid);
 
 		return pid;
+	}
+
+	/**
+	 * Generate a unique identifier and reserve it for use by Subject in the Session.  The identifier
+	 * is generated according to the rules of the provided scheme, which must be a scheme which
+	 * is support by the generateIdentifier service.  Currently, the only supported scheme is
+	 * "UUID" identifiers.
+	 * 
+	 * @param session the Session identifying the caller
+	 * @param scheme the name of the identifier scheme to be used in generating IDs
+	 * @param fragment a string fragment that should be included in the identifier (optional)
+	 * @return the Identifier that was generated
+	 * @throws InvalidRequest if the scheme is not supported, or no scheme is provided
+	 */
+	public Identifier generateIdentifier(Session session, String scheme, String fragment) throws InvalidRequest, ServiceFailure {
+
+	    Identifier pid = new Identifier();	    
+	    boolean unique = false;
+	    
+	    if (null == scheme) {
+            throw new InvalidRequest("4191", "The scheme parameter must be provided.");
+	    }
+	    // Continuously loop, generating identifiers until one is found that is unique, but
+	    // don't try more than MAX_RETRY times in case something is wrong with the associated services
+	    int count = 0;
+	    while (!unique && count < MAX_RETRY) {
+	        count++;
+	        
+	        // Based on the scheme, generate a candidate Identifier
+	        if (scheme.equals(UUID_ID)) {
+	            UUID uuid = UUID.randomUUID();
+	            pid.setValue("urn:uuid:" + uuid.toString());
+	        } else if (scheme.equals(DOI)) {
+	            // For now we do not generate DOIs, but may provide this in a future implementation
+	            throw new InvalidRequest("4191", "Identifier scheme not supported.");
+	        } else if (scheme.equals(ARK)) {
+	            // For now we do not generate ARKs, but may provide this in a future implementation
+	            throw new InvalidRequest("4191", "Identifier scheme not supported.");
+	        } else {
+	            throw new InvalidRequest("4191", "Identifier scheme not supported.");
+	        }
+
+	        // Try to register the candidate, which succeeds if it is unique
+	        try {
+	            Identifier reservedID = reserveIdentifier(session, pid);
+	            unique = true;
+	        } catch (IdentifierNotUnique e) {
+	            unique = false;
+	        }
+	    }
+	    
+	    if (!unique) {
+	        // We exited the loop by hitting the maximum number of tries, rather than getting
+	        // an actual unique ID, so set the pid to null
+	        pid = null;
+            throw new ServiceFailure("4210", "Unique identifier could not be generated.");
+	    }
+	    
+	    return pid;
 	}
 
 	/**
