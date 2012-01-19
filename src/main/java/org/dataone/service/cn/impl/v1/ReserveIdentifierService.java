@@ -171,8 +171,9 @@ public class ReserveIdentifierService extends LDAPService {
 	 * @return
 	 * @throws NotAuthorized
 	 * @throws NotFound
+	 * @throws IdentifierNotUnique 
 	 */
-	public boolean removeReservation(Session session, Identifier pid) throws NotAuthorized, NotFound {
+	public boolean removeReservation(Session session, Identifier pid) throws NotAuthorized, NotFound, IdentifierNotUnique {
 
 		// check that we have the reservation
 		if (hasReservation(session, pid)) {
@@ -187,7 +188,15 @@ public class ReserveIdentifierService extends LDAPService {
 		return false;
 	}
 
-	public boolean hasReservation(Session session, Identifier pid) throws NotAuthorized, NotFound {
+	public boolean hasReservation(Session session, Identifier pid) throws NotAuthorized, NotFound, IdentifierNotUnique {
+		
+		// check hz for existing system metadata on this pid
+		String mapName = Settings.getConfiguration().getString("dataone.hazelcast.systemMetadata");
+		Object sysMeta = HazelcastClientInstance.getHazelcastClient().getMap(mapName).get(pid);
+		if (sysMeta != null) {
+            throw new IdentifierNotUnique("4876", "The given pid is already in use: " + pid.getValue());
+		}
+		
 		Subject subject = session.getSubject();
 		boolean ownedBySubject = false;
 
