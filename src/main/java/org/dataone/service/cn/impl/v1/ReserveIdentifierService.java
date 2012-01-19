@@ -73,8 +73,9 @@ public class ReserveIdentifierService extends LDAPService {
 	 * @param pid
 	 * @return
 	 * @throws IdentifierNotUnique
+	 * @throws NotAuthorized 
 	 */
-	public Identifier reserveIdentifier(Session session, Identifier pid) throws IdentifierNotUnique {
+	public Identifier reserveIdentifier(Session session, Identifier pid) throws IdentifierNotUnique, NotAuthorized {
 
 		// check hz for existing system metadata on this pid
 		String mapName = Settings.getConfiguration().getString("dataone.hazelcast.systemMetadata");
@@ -94,7 +95,7 @@ public class ReserveIdentifierService extends LDAPService {
 			if (!ownedBySubject) {
 				String msg = "Identifier (" + pid.getValue() + ") is reserved and not owned by subject, " + subject.getValue();
 				log.warn(msg);
-				throw new IdentifierNotUnique("0000", msg);
+				throw new NotAuthorized("4180", msg);
 			}
 			// TODO: update the date of the reservation?
 		}
@@ -116,8 +117,9 @@ public class ReserveIdentifierService extends LDAPService {
 	 * @param fragment a string fragment that should be included in the identifier (optional)
 	 * @return the Identifier that was generated
 	 * @throws InvalidRequest if the scheme is not supported, or no scheme is provided
+	 * @throws NotAuthorized 
 	 */
-	public Identifier generateIdentifier(Session session, String scheme, String fragment) throws InvalidRequest, ServiceFailure {
+	public Identifier generateIdentifier(Session session, String scheme, String fragment) throws InvalidRequest, ServiceFailure, NotAuthorized {
 
 	    Identifier pid = new Identifier();	    
 	    boolean unique = false;
@@ -194,7 +196,7 @@ public class ReserveIdentifierService extends LDAPService {
 		String mapName = Settings.getConfiguration().getString("dataone.hazelcast.systemMetadata");
 		Object sysMeta = HazelcastClientInstance.getHazelcastClient().getMap(mapName).get(pid);
 		if (sysMeta != null) {
-            throw new IdentifierNotUnique("4876", "The given pid is already in use: " + pid.getValue());
+            throw new IdentifierNotUnique("4925", "The given pid is already in use: " + pid.getValue());
 		}
 		
 		Subject subject = session.getSubject();
@@ -205,13 +207,13 @@ public class ReserveIdentifierService extends LDAPService {
 
 		if (dn == null) {
 			String msg = "No reservation found for pid: " + pid.getValue();
-			throw new NotFound("0000", msg);
+			throw new NotFound("4923", msg);
 		} else {
 			// check that it is ours since it exists
 			ownedBySubject = checkAttribute(dn, "subject", subject.getValue());
 			if (!ownedBySubject) {
 				String msg = "Reserved Identifier (" + pid.getValue() + ") is not owned by subject, " + subject.getValue();
-				throw new NotAuthorized("0000", msg);
+				throw new NotAuthorized("4924", msg);
 			}
 		}
 
