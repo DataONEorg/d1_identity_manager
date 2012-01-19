@@ -31,9 +31,12 @@ import org.dataone.service.exceptions.InvalidRequest;
 import org.dataone.service.exceptions.NotAuthorized;
 import org.dataone.service.exceptions.NotFound;
 import org.dataone.service.exceptions.ServiceFailure;
+import org.dataone.service.types.v1.Group;
 import org.dataone.service.types.v1.Identifier;
+import org.dataone.service.types.v1.Person;
 import org.dataone.service.types.v1.Session;
 import org.dataone.service.types.v1.Subject;
+import org.dataone.service.types.v1.SubjectInfo;
 
 /**
  * Class used for adding and managing reserved Identifiers
@@ -177,8 +180,9 @@ public class ReserveIdentifierService extends LDAPService {
 	 */
 	public boolean removeReservation(Session session, Identifier pid) throws NotAuthorized, NotFound, IdentifierNotUnique {
 
+		SubjectInfo subjectInfo = null;
 		// check that we have the reservation
-		if (hasReservation(session, pid)) {
+		if (hasReservation(session, subjectInfo, pid)) {
 			// look up the dn to remove it
 			String dn = lookupDN(pid);
 			if (dn != null) {
@@ -190,7 +194,7 @@ public class ReserveIdentifierService extends LDAPService {
 		return false;
 	}
 
-	public boolean hasReservation(Session session, Identifier pid) throws NotAuthorized, NotFound, IdentifierNotUnique {
+	public boolean hasReservation(Session session, SubjectInfo subjectInfo, Identifier pid) throws NotAuthorized, NotFound, IdentifierNotUnique {
 		
 		// check hz for existing system metadata on this pid
 		String mapName = Settings.getConfiguration().getString("dataone.hazelcast.systemMetadata");
@@ -199,7 +203,25 @@ public class ReserveIdentifierService extends LDAPService {
             throw new IdentifierNotUnique("4925", "The given pid is already in use: " + pid.getValue());
 		}
 		
-		Subject subject = session.getSubject();
+		List<Subject> subjects = new ArrayList<Subject>();
+		if (subjectInfo != null) {
+			// equivalent ids
+			if (subjectInfo.getPersonList() != null) {
+				for (Person p: subjectInfo.getPersonList()) {
+					subjects.add(p.getSubject());
+				}
+			}
+			// groups
+			if (subjectInfo.getGroupList() != null) {
+				for (Group g: subjectInfo.getGroupList()) {
+					subjects.add(g.getSubject());
+				}
+			}
+		} else {
+			// use the passed in Session subject
+			Subject sessionSubject = session.getSubject();
+			subjects.add(sessionSubject);
+		}
 		boolean ownedBySubject = false;
 
 		// look up the identifier
@@ -210,9 +232,14 @@ public class ReserveIdentifierService extends LDAPService {
 			throw new NotFound("4923", msg);
 		} else {
 			// check that it is ours since it exists
-			ownedBySubject = checkAttribute(dn, "subject", subject.getValue());
+			for (Subject subject: subjects) {
+				ownedBySubject = checkAttribute(dn, "subject", subject.getValue());
+				if (ownedBySubject) {
+					break;
+				}
+			}
 			if (!ownedBySubject) {
-				String msg = "Reserved Identifier (" + pid.getValue() + ") is not owned by subject, " + subject.getValue();
+				String msg = "Reserved Identifier (" + pid.getValue() + ") is not owned by given subject[s]";
 				throw new NotAuthorized("4924", msg);
 			}
 		}
