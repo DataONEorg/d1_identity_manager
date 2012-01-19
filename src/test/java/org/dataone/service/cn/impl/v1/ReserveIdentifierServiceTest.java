@@ -14,6 +14,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.dataone.configuration.Settings;
 import org.dataone.service.exceptions.IdentifierNotUnique;
+import org.dataone.service.exceptions.NotAuthorized;
 import org.dataone.service.types.v1.Identifier;
 import org.dataone.service.types.v1.Session;
 import org.dataone.service.types.v1.Subject;
@@ -112,7 +113,7 @@ public class ReserveIdentifierServiceTest {
 			// make sure that we get an error when attempting to reserve as  someone else
 			try {
 				retPid = service.reserveIdentifier(getSession(anotherSubject), pid);
-			} catch (IdentifierNotUnique inu) {
+			} catch (NotAuthorized na) {
 				retPid = null;
 			}
 			assertNull(retPid);
