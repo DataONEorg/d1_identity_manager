@@ -6,6 +6,8 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.util.Set;
+
 import javax.naming.NamingException;
 
 import org.apache.commons.logging.Log;
@@ -15,7 +17,14 @@ import org.dataone.service.exceptions.IdentifierNotUnique;
 import org.dataone.service.types.v1.Identifier;
 import org.dataone.service.types.v1.Session;
 import org.dataone.service.types.v1.Subject;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
+
+import com.hazelcast.config.ClasspathXmlConfig;
+import com.hazelcast.core.Hazelcast;
+import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.core.Member;
 
 /**
  *	Tests the LDAP implementation for reserving Identifiers on the CN
@@ -41,6 +50,39 @@ public class ReserveIdentifierServiceTest {
 		return session;
 	}
 
+    @Before
+    public void setUp() throws Exception {
+        
+        // Hazelcast Config testing
+
+        ClasspathXmlConfig hzConfig = new ClasspathXmlConfig("org/dataone/configuration/hazelcast.xml");
+
+        System.out.println("Hazelcast Group Config:\n" + hzConfig.getGroupConfig());
+        System.out.print("Hazelcast Maps: ");
+        for (String mapName : hzConfig.getMapConfigs().keySet()) {
+            System.out.print(mapName + " ");
+        }
+        System.out.println();
+        System.out.print("Hazelcast Queues: ");
+        for (String queueName : hzConfig.getQConfigs().keySet()) {
+            System.out.print(queueName + " ");
+        }
+        System.out.println();
+        HazelcastInstance hzMember = Hazelcast.init(hzConfig);
+        Set<Member> members = hzMember.getCluster().getMembers();
+        System.out.println("Cluster size " + members.size());
+        for (Member m : members) {
+            System.out.println(hzMember.getName() + "'s InetSocketAddress: "
+                    + m.getInetSocketAddress());
+        }
+
+    }
+    
+    @After
+    public void tearDown() throws Exception {
+        Hazelcast.shutdownAll();
+    }
+    
 	@Test
 	public void reserveIdentifier()  {
 

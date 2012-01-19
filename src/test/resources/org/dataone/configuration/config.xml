@@ -2,6 +2,7 @@
 <!-- Apache Commons Configuration -->
 <configuration>
 	<properties fileName="identity.test.properties"/>
-        <properties fileName="registryLdap.properties"/>
-        <properties fileName="ldapService.properties"/>
+	<properties fileName="registryLdap.properties"/>
+	<properties fileName="ldapService.properties"/>
+	<properties fileName="hazelcast.properties"/>    
 </configuration>
