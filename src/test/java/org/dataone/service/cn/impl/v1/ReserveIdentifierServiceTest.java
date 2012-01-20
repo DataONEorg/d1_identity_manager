@@ -119,7 +119,7 @@ public class ReserveIdentifierServiceTest {
 			assertNull(retPid);
 
 			// check that he still have the reservation
-			check = service.hasReservation(getSession(subject), null, pid);
+			check = service.hasReservation(getSession(subject), subject, pid);
 			assertTrue(check);
 
 			// now clean up
@@ -174,7 +174,7 @@ public class ReserveIdentifierServiceTest {
             assertTrue(retPid.getValue().startsWith("urn:uuid:"));
 
             // check that he still have the reservation
-            check = service.hasReservation(getSession(subject), null, retPid);
+            check = service.hasReservation(getSession(subject), subject, retPid);
             assertTrue(check);
 
             // now clean up
