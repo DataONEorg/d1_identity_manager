@@ -185,7 +185,7 @@ public class ReserveIdentifierService extends LDAPService {
 	 */
 	public boolean removeReservation(Session session, Identifier pid) throws NotAuthorized, NotFound, IdentifierNotUnique {
 
-		Subject subject = null;
+		Subject subject = session.getSubject();
 		// check that we have the reservation
 		if (hasReservation(session, subject, pid)) {
 			// look up the dn to remove it
