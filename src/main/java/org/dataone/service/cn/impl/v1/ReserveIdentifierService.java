@@ -53,6 +53,9 @@ public class ReserveIdentifierService extends LDAPService {
 
 	private static Timer timer = null;
 	
+	private static CNIdentityLDAPImpl identityService = null;
+
+	
 	private static final String UUID_ID = "UUID";
 	private static final String DOI = "DOI";
 	private static final String ARK = "ARK";
@@ -61,6 +64,8 @@ public class ReserveIdentifierService extends LDAPService {
 	public ReserveIdentifierService() {
 		// we need to use a different base for the ids
 		this.setBase(Settings.getConfiguration().getString("reserveIdentifier.ldap.base"));
+		
+		identityService = new CNIdentityLDAPImpl();
 	}
 	
 	@Override
@@ -180,9 +185,9 @@ public class ReserveIdentifierService extends LDAPService {
 	 */
 	public boolean removeReservation(Session session, Identifier pid) throws NotAuthorized, NotFound, IdentifierNotUnique {
 
-		SubjectInfo subjectInfo = null;
+		Subject subject = null;
 		// check that we have the reservation
-		if (hasReservation(session, subjectInfo, pid)) {
+		if (hasReservation(session, subject, pid)) {
 			// look up the dn to remove it
 			String dn = lookupDN(pid);
 			if (dn != null) {
@@ -194,13 +199,21 @@ public class ReserveIdentifierService extends LDAPService {
 		return false;
 	}
 
-	public boolean hasReservation(Session session, SubjectInfo subjectInfo, Identifier pid) throws NotAuthorized, NotFound, IdentifierNotUnique {
+	public boolean hasReservation(Session session, Subject subject, Identifier pid) throws NotAuthorized, NotFound, IdentifierNotUnique {
 		
 		// check hz for existing system metadata on this pid
 		String mapName = Settings.getConfiguration().getString("dataone.hazelcast.systemMetadata");
 		Object sysMeta = HazelcastClientInstance.getHazelcastClient().getMap(mapName).get(pid);
 		if (sysMeta != null) {
             throw new IdentifierNotUnique("4925", "The given pid is already in use: " + pid.getValue());
+		}
+		
+		// look up the SubjectInfo
+		SubjectInfo subjectInfo = null;
+		try {
+			subjectInfo = identityService.getSubjectInfo(session, subject);
+		} catch (Exception e) {
+			log.warn("Could not look up SubjectInfo for: " + subject);
 		}
 		
 		List<Subject> subjects = new ArrayList<Subject>();
@@ -218,9 +231,8 @@ public class ReserveIdentifierService extends LDAPService {
 				}
 			}
 		} else {
-			// use the passed in Session subject
-			Subject sessionSubject = session.getSubject();
-			subjects.add(sessionSubject);
+			// use the passed in subject
+			subjects.add(subject);
 		}
 		boolean ownedBySubject = false;
 
@@ -232,8 +244,8 @@ public class ReserveIdentifierService extends LDAPService {
 			throw new NotFound("4923", msg);
 		} else {
 			// check that it is ours since it exists
-			for (Subject subject: subjects) {
-				ownedBySubject = checkAttribute(dn, "subject", subject.getValue());
+			for (Subject s: subjects) {
+				ownedBySubject = checkAttribute(dn, "subject", s.getValue());
 				if (ownedBySubject) {
 					break;
 				}
