@@ -838,6 +838,11 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 												pList.addPerson(p);
 											}
 										}
+										if (equivalentIdentityRequestInfo.getGroupList() != null) {
+											for (Group g: equivalentIdentityRequestInfo.getGroupList()) {
+												pList.addGroup(g);
+											}
+										}
 									} catch (ServiceFailure e) {
 										// ignore NotFound
 										log.warn("No account found for equivalentIdentityRequest entry: " + equivalentIdentityRequest.getValue(), e);
@@ -870,6 +875,11 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 										if (equivalentIdentityInfo.getPersonList() != null) {
 											for (Person p: equivalentIdentityInfo.getPersonList()) {
 												pList.addPerson(p);
+											}
+										}
+										if (equivalentIdentityInfo.getGroupList() != null) {
+											for (Group g: equivalentIdentityInfo.getGroupList()) {
+												pList.addGroup(g);
 											}
 										}
 									} catch (ServiceFailure e) {
