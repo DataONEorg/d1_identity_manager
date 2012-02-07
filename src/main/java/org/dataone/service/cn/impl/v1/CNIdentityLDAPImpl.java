@@ -746,6 +746,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 						items = (NamingEnumeration<String>) attribute.getAll();
 						while (items.hasMore()) {
 							attributeValue = items.next();
+							attributeValue = CertificateManager.getInstance().standardizeDN(attributeValue);
 							Subject member = new Subject();
 							member.setValue(attributeValue);
 							group.addHasMember(member);
@@ -824,6 +825,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 							items = (NamingEnumeration<String>) attribute.getAll();
 							while (items.hasMore()) {
 								attributeValue = items.next();
+								attributeValue = CertificateManager.getInstance().standardizeDN(attributeValue);
 								Subject equivalentIdentityRequest = new Subject();
 								equivalentIdentityRequest.setValue(attributeValue);
 								log.debug("Found attribute: " + attributeName + "=" + attributeValue);
@@ -862,6 +864,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 							items = (NamingEnumeration<String>) attribute.getAll();
 							while (items.hasMore()) {
 								attributeValue = items.next();
+								attributeValue = CertificateManager.getInstance().standardizeDN(attributeValue);
 								Subject equivalentIdentity = new Subject();
 								equivalentIdentity.setValue(attributeValue);
 								person.addEquivalentIdentity(equivalentIdentity);
