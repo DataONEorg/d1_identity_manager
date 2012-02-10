@@ -545,7 +545,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
     	throws ServiceFailure, NotAuthorized, NotImplemented {
 
 		// check redaction policy
-		boolean redact = isUnredacted(session);
+		boolean redact = shouldRedact(session);
 		
 		SubjectInfo subjectInfo = new SubjectInfo();
 	    String dn = subject.getValue();
@@ -617,7 +617,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	        NotImplemented {
 
 		// check redaction policy
-		boolean redact = isUnredacted(session);
+		boolean redact = shouldRedact(session);
 		
 		SubjectInfo pList = new SubjectInfo();
 		try {
@@ -964,7 +964,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 			NotImplemented {
 		
 		// check redaction policy
-		boolean redact = isUnredacted(session);
+		boolean redact = shouldRedact(session);
 		
 		SubjectInfo subjectInfo = new SubjectInfo();
 	    String dn = subject.getValue();
@@ -1040,7 +1040,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		return true;
 	}
 	
-	private boolean isUnredacted(Session session) throws NotImplemented, ServiceFailure {
+	private boolean shouldRedact(Session session) throws NotImplemented, ServiceFailure {
 		
 		// CN should see unredacted list
 		if (session != null) {
@@ -1057,13 +1057,13 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 				if (node.getType().equals(NodeType.CN)) {
 					for (Subject subject: node.getSubjectList()) {
 						if (subject.getValue().equals(session.getSubject().getValue())) {
-							return true;
+							return false;
 						}
 					}
 				}
 			}
 		} 
-		return false;
+		return true;
 	}
 
 	public static void main(String[] args) {
