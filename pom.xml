@@ -1,70 +1,71 @@
+
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-	<modelVersion>4.0.0</modelVersion>
-	<groupId>org.dataone</groupId>
-	<artifactId>d1_identity_manager</artifactId>
-	<version>1.0.0-SNAPSHOT</version>
-	<name>DataONE Identity Manager</name>
-	<url>http://dataone.org</url>
-	<repositories>
-		<repository>
-			<id>sonatype.org</id>
-			<url>https://repository.sonatype.org/content/shadows/centralm1</url>
-			<releases>
-				<enabled>true</enabled>
-			</releases>
-			<snapshots>
-				<enabled>false</enabled>
-			</snapshots>
-		</repository>
-            <repository>
-                <id>dataone.org</id>
-                <url>http://dev-testing.dataone.org/maven</url>
-                <releases>
-                    <enabled>true</enabled>
-                </releases>
-                <snapshots>
-                    <enabled>true</enabled>
-                </snapshots>
-            </repository>
-	</repositories>
-	<dependencies>
-		<dependency>
-			<groupId>junit</groupId>
-			<artifactId>junit</artifactId>
-			<version>4.7</version>
-			<type>jar</type>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.dataone</groupId>
-			<artifactId>d1_cn_common</artifactId>
-			<version>1.0.0-SNAPSHOT</version>
-			<type>jar</type>
-		</dependency>
-		<dependency>
-			<groupId>org.dataone</groupId>
-			<artifactId>d1_libclient_java</artifactId>
-			<version>1.0.1-RC2</version>
-			<type>jar</type>
-		</dependency>
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>org.dataone</groupId>
+    <artifactId>d1_identity_manager</artifactId>
+    <version>1.0.0-RC1</version>
+    <name>DataONE Identity Manager</name>
+    <url>http://dataone.org</url>
+    <repositories>
+        <repository>
+            <id>sonatype.org</id>
+            <url>https://repository.sonatype.org/content/shadows/centralm1</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>dataone.org</id>
+            <url>http://dev-testing.dataone.org/maven</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+    <dependencies>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.7</version>
+            <type>jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.dataone</groupId>
+            <artifactId>d1_cn_common</artifactId>
+            <version>1.0.0-RC1</version>
+            <type>jar</type>
+        </dependency>
+        <dependency>
+            <groupId>org.dataone</groupId>
+            <artifactId>d1_libclient_java</artifactId>
+            <version>1.0.1-RC2</version>
+            <type>jar</type>
+        </dependency>
         <dependency>
             <groupId>org.dataone</groupId>
             <artifactId>d1_cn_noderegistry</artifactId>
-			<version>1.0.0-SNAPSHOT</version>
-			<type>jar</type>
-		</dependency>
-	</dependencies>
-	<build>
-		<plugins>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-compiler-plugin</artifactId>
-				<configuration>
-					<source>1.6</source>
-					<target>1.6</target>
-				</configuration>
-			</plugin>
+            <version>1.0.0-RC1</version>
+            <type>jar</type>
+        </dependency>
+    </dependencies>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>1.6</source>
+                    <target>1.6</target>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>buildnumber-maven-plugin</artifactId>
@@ -84,7 +85,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
-                  <configuration>
+                <configuration>
                     <archive>
                         <manifestEntries>
                             <D1-version>${project.version}</D1-version>
@@ -95,41 +96,41 @@
                     </archive>
                 </configuration>
             </plugin>
-			<plugin>
-				<groupId>com.mycila.maven-license-plugin</groupId>
-				<artifactId>maven-license-plugin</artifactId>
-				<configuration>
-					<header>src/license-header.txt</header>
-				</configuration>
-			</plugin>
-		</plugins>
-		<resources>
-	      <resource>
-	        <directory>src/main/resources</directory>
-	        <filtering>true</filtering>
-	        <includes>
-	          <include>buildInfo/buildInfo.properties</include>
-	        </includes>
-	      </resource>
-	      <resource>
-	        <directory>src/main/resources</directory>
-	        <filtering>false</filtering>
-	        <includes>
-	          <include>**/*.*</include>
-	        </includes>
-	      </resource>
-		</resources>
-	</build>
-	<licenses>
-		<license>
-			<name>Apache License, Version 2.0</name>
-			<url>LICENSE.txt</url>
-		</license>
-	</licenses>
+            <plugin>
+                <groupId>com.mycila.maven-license-plugin</groupId>
+                <artifactId>maven-license-plugin</artifactId>
+                <configuration>
+                    <header>src/license-header.txt</header>
+                </configuration>
+            </plugin>
+        </plugins>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>buildInfo/buildInfo.properties</include>
+                </includes>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+                <includes>
+                    <include>**/*.*</include>
+                </includes>
+            </resource>
+        </resources>
+    </build>
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>LICENSE.txt</url>
+        </license>
+    </licenses>
     <scm>
-      <url>https://repository.dataone.org/software/cicore</url>
-      <connection>scm:svn:https://repository.dataone.org/software/cicore</connection>
-      <developerConnection>scm:svn:https://repository.dataone.org/software/cicore</developerConnection>
-      <tag>HEAD</tag>
+        <url>https://repository.dataone.org/software/cicore</url>
+        <connection>scm:svn:https://repository.dataone.org/software/cicore</connection>
+        <developerConnection>scm:svn:https://repository.dataone.org/software/cicore</developerConnection>
+        <tag>HEAD</tag>
     </scm>
 </project>

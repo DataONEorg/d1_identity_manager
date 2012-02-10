@@ -25,6 +25,7 @@ import java.io.InputStream;
 import java.io.ByteArrayInputStream;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
+import org.dataone.cn.ldap.NodeAccess;
 import org.dataone.service.util.TypeMarshaller;
 /**
  *
@@ -42,6 +43,7 @@ public class CNIdentityLDAPImplTest {
 	private String secondarySubject = Settings.getConfiguration().getString("test.secondarySubject");
 	private String groupName = Settings.getConfiguration().getString("test.groupName");
 
+        NodeAccess nodeAccess = new NodeAccess();
         final static int SIZE = 16384;
         
 	private static Session getSession(Subject subject) {
@@ -260,7 +262,7 @@ public class CNIdentityLDAPImplTest {
                     NodeReference cnNodeReference = nodeRegistryService.register(testCNNode);
                     assertNotNull(cnNodeReference);
                     testCNNode.setIdentifier(cnNodeReference);
-                    nodeRegistryService.approveNode(cnNodeReference);
+                    nodeAccess.setNodeApproved(cnNodeReference, Boolean.TRUE);
 
 			Subject p1 = new Subject();
 			p1.setValue(primarySubject);
@@ -407,13 +409,14 @@ public class CNIdentityLDAPImplTest {
 
 		try {
 
-			// test that this email address is saved and retrieved
+			// test that the Email  is redacted, only CN subjects can see email addresses
 			String email = "test1@dataone.org";
 
 			Subject subject = new Subject();
 			subject.setValue(primarySubject);
 			Person person = new Person();
 			person.setSubject(subject);
+                        // test that the Given Name is saved and retrieved
 			person.setFamilyName("test1");
 			person.addGivenName("test1");
 			person.addEmail(email);
@@ -426,9 +429,11 @@ public class CNIdentityLDAPImplTest {
 			boolean check = false;
 			SubjectInfo subjectInfo = identityService.getSubjectInfo(getSession(subject), p);
 			assertNotNull(subjectInfo);
-			check = subjectInfo.getPerson(0).getEmail(0).equals(email);
+
+			check = subjectInfo.getPerson(0).getGivenName(0).equals("test1");
 			assertTrue(check);
 
+                        assertTrue(subjectInfo.getPerson(0).sizeEmailList() == 0);
 			//clean up
 			check = identityService.removeSubject(p);
 			assertTrue(check);
@@ -486,8 +491,8 @@ public class CNIdentityLDAPImplTest {
                         for (Person checkPerson : subjectInfo.getPersonList()) {
                             if (checkPerson.getFamilyName().equals("test1")) {
                                 personCheck = true;
-                                check = checkPerson.getEmail(0).equalsIgnoreCase(email);
-                                assertTrue(check);
+                                // make certain email is redacted
+                                assertTrue(checkPerson.sizeEmailList() == 0);
                             }
                         }
                         assertNotNull(personCheck);
@@ -534,7 +539,7 @@ public class CNIdentityLDAPImplTest {
                     NodeReference cnNodeReference = nodeRegistryService.register(testCNNode);
                     assertNotNull(cnNodeReference);
                     testCNNode.setIdentifier(cnNodeReference);
-                    nodeRegistryService.approveNode(cnNodeReference);
+                    nodeAccess.setNodeApproved(cnNodeReference, Boolean.TRUE);
 			Subject p1 = new Subject();
 			p1.setValue(primarySubject);
 			Person person1 = new Person();

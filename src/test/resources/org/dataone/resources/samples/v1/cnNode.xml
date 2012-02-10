@@ -9,7 +9,7 @@
 <d1:node xmlns:d1="http://ns.dataone.org/service/types/v1"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         replicate="false" synchronize="false" type="cn" state="up">
-    <identifier>testcn</identifier>
+    <identifier>urn:node:testcnid</identifier>
     <name>localhost-cntest-1</name>
     <description>Nowhere Test Member node</description>
     <baseURL>https://nowhere.com/cn</baseURL>
