@@ -102,7 +102,6 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	    // 'uniqueMember' is required, so always add the creator
 	    Attribute uniqueMembers = new BasicAttribute("uniqueMember");
 	    uniqueMembers.add(groupAdmin.getValue());
-	    uniqueMembers.add(groupAdmin.getValue());
 	    // add all other members as 'uniqueMembers'
 	    if (group.getHasMemberList() != null) {
 		    for (Subject member: group.getHasMemberList()) {
