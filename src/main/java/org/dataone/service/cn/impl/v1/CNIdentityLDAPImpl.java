@@ -545,6 +545,12 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 
 		// check redaction policy
 		boolean redact = shouldRedact(session);
+		if (redact) {
+			//if we are looking up our own info then don't redact
+			if (session != null && session.getSubject().equals(subject)) {
+				redact = false;
+			}
+		}
 		
 		SubjectInfo subjectInfo = new SubjectInfo();
 	    String dn = subject.getValue();
@@ -964,6 +970,12 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		
 		// check redaction policy
 		boolean redact = shouldRedact(session);
+		if (redact) {
+			//if we are looking up our own info then don't redact
+			if (session != null && session.getSubject().equals(subject)) {
+				redact = false;
+			}
+		}
 		
 		SubjectInfo subjectInfo = new SubjectInfo();
 	    String dn = subject.getValue();

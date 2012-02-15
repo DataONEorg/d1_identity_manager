@@ -433,7 +433,7 @@ public class CNIdentityLDAPImplTest {
 			check = subjectInfo.getPerson(0).getGivenName(0).equals("test1");
 			assertTrue(check);
 
-                        assertTrue(subjectInfo.getPerson(0).sizeEmailList() == 0);
+            assertTrue(subjectInfo.getPerson(0).sizeEmailList() == 1);
 			//clean up
 			check = identityService.removeSubject(p);
 			assertTrue(check);
