@@ -85,15 +85,19 @@ public class ReserveIdentifierService extends LDAPService {
 	 */
 	public Identifier reserveIdentifier(Session session, Identifier pid) throws IdentifierNotUnique, NotAuthorized {
 
+		if (session == null) {
+			throw new NotAuthorized("4180", "Session is required to reserve identifiers");
+		}
+		
+		Subject subject = session.getSubject();
+		boolean ownedBySubject = false;
+		
 		// check hz for existing system metadata on this pid
 		String mapName = Settings.getConfiguration().getString("dataone.hazelcast.systemMetadata");
 		Object sysMeta = HazelcastClientInstance.getHazelcastClient().getMap(mapName).get(pid);
 		if (sysMeta != null) {
 			throw new IdentifierNotUnique("4210", "The given pid is already in use: " + pid.getValue());
 		}
-		
-		Subject subject = session.getSubject();
-		boolean ownedBySubject = false;
 
 		// look up the identifier before attempting to add it
 		String dn = lookupDN(pid);
