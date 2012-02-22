@@ -109,7 +109,10 @@ public class ReserveIdentifierService extends LDAPService {
 				log.warn(msg);
 				throw new NotAuthorized("4180", msg);
 			}
-			// TODO: update the date of the reservation?
+			// still, it's already reserved
+			String msg = "The given pid: " + pid.getValue() + " has already been reserved by: " + subject.getValue();
+			throw new IdentifierNotUnique("4210", msg);
+
 		}
 
 		// add an entry for the subject and pid
