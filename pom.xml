@@ -4,9 +4,14 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.dataone</groupId>
     <artifactId>d1_identity_manager</artifactId>
-    <version>1.0.0-RC2-SNAPSHOT</version>
+    <version>1.0.0-RC3-SNAPSHOT</version>
     <name>DataONE Identity Manager</name>
     <url>http://dataone.org</url>
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <d1_libclient_version>1.0.1-RC4-SNAPSHOT</d1_libclient_version>
+        <d1_cn_noderegistry_version>1.0.0-RC3-SNAPSHOT</d1_cn_noderegistry_version>
+    </properties>
     <repositories>
         <repository>
             <id>sonatype.org</id>
@@ -39,20 +44,14 @@
         </dependency>
         <dependency>
             <groupId>org.dataone</groupId>
-            <artifactId>d1_cn_common</artifactId>
-            <version>1.0.0-RC2-SNAPSHOT</version>
-            <type>jar</type>
-        </dependency>
-        <dependency>
-            <groupId>org.dataone</groupId>
             <artifactId>d1_libclient_java</artifactId>
-            <version>1.0.1-RC3-SNAPSHOT</version>
+            <version>${d1_libclient_version}</version>
             <type>jar</type>
         </dependency>
         <dependency>
             <groupId>org.dataone</groupId>
             <artifactId>d1_cn_noderegistry</artifactId>
-            <version>1.0.0-RC2-SNAPSHOT</version>
+            <version>${d1_cn_noderegistry_version}</version>
             <type>jar</type>
         </dependency>
     </dependencies>
