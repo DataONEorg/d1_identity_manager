@@ -546,8 +546,16 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		// check redaction policy
 		boolean redact = shouldRedact(session);
 		if (redact) {
+			if (session != null) {
+				log.debug("subjectInfo requested for: '" + subject.getValue() + "'");
+				log.debug("checking if redaction holds for the calling user: '" + session.getSubject().getValue() + "'");
+			} else {
+				log.debug("session is null, we will redact email");
+			}
+			
 			//if we are looking up our own info then don't redact
 			if (session != null && session.getSubject().equals(subject)) {
+				log.debug("subject MATCH. lifting redaction for the calling user: '" + session.getSubject().getValue() + "'");
 				redact = false;
 			}
 		}
@@ -971,8 +979,16 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		// check redaction policy
 		boolean redact = shouldRedact(session);
 		if (redact) {
+			if (session != null) {
+				log.debug("subjectInfo requested for: '" + subject.getValue() + "'");
+				log.debug("checking if redaction holds for the calling user: '" + session.getSubject().getValue() + "'");
+			} else {
+				log.debug("session is null, we will redact email");
+			}
+			
 			//if we are looking up our own info then don't redact
 			if (session != null && session.getSubject().equals(subject)) {
+				log.debug("subject MATCH. lifting redaction for the calling user: '" + session.getSubject().getValue() + "'");
 				redact = false;
 			}
 		}
