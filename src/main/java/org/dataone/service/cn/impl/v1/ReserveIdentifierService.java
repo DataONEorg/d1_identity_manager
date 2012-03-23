@@ -428,44 +428,57 @@ public class ReserveIdentifierService extends LDAPService {
 	 * @param pid
 	 * @return the DN in LDAP for the given pid
 	 */
-	private String lookupDN(Identifier pid) {
+    private String lookupDN(Identifier pid) {
 
         String dn = null;
 
-		try {
-			DirContext ctx = getContext();
-			SearchControls ctls = new SearchControls();
-		    ctls.setSearchScope(SearchControls.SUBTREE_SCOPE);
+        try {
+            DirContext ctx = getContext();
+            SearchControls ctls = new SearchControls();
+            ctls.setSearchScope(SearchControls.SUBTREE_SCOPE);
+            String escapedPid = pid.getValue();
+            // From http://tools.ietf.org/html/rfc4515
+            /*  The <valueencoding> rule ensures that the entire filter string is a
+            valid UTF-8 string and provides that the octets that represent the
+            ASCII characters "*" (ASCII 0x2a), "(" (ASCII 0x28), ")" (ASCII
+            0x29), "\" (ASCII 0x5c), and NUL (ASCII 0x00) are represented as a
+            backslash "\" (ASCII 0x5c) followed by the two hexadecimal digits
+            representing the value of the encoded octet. */
+            escapedPid = escapedPid.replace("\\", "\\5c");
+            escapedPid = escapedPid.replace("*", "\\2a");
+            escapedPid = escapedPid.replace("(", "\\28");
+            escapedPid = escapedPid.replace(")", "\\29");
+            escapedPid = escapedPid.replace("\u0000", "\\00");
+            
+            // search for the given pid
+            String searchCriteria = "(&(objectClass=d1Reservation)(identifier=" + escapedPid + "))";
 
-		    // search for the given pid
-		    String searchCriteria = "(&(objectClass=d1Reservation)(identifier=" + pid.getValue() + "))";
+            NamingEnumeration<SearchResult> results =
+                    ctx.search(base, searchCriteria, ctls);
 
-	        NamingEnumeration<SearchResult> results =
-	            ctx.search(base, searchCriteria, ctls);
-
-	        while (results != null && results.hasMore()) {
-	            SearchResult si = results.next();
-	            dn = si.getNameInNamespace();
-	            log.debug("Search result found for: " + dn);
-	            //return dn;
-	            // or we could double check
-	            Attributes attributes = si.getAttributes();
-	            NamingEnumeration<? extends Attribute> values = attributes.getAll();
-	            while (values.hasMore()) {
-	            	Attribute attribute = values.next();
-					String attributeName = attribute.getID();
-					if (attributeName.equalsIgnoreCase("identifier")) {
-						String attributeValue = (String) attribute.get();
-						if (pid.getValue().equals(attributeValue)) {
-							return dn;
-						}
-					}
-	            }
-	        }
-		} catch (Exception e) {
-			log.error("problem looking up DN for identifier: " + pid.getValue(), e);
-		}
-		return dn;
-	}
+            while (results != null && results.hasMore()) {
+                SearchResult si = results.next();
+                dn = si.getNameInNamespace();
+                log.debug("Search result found for: " + dn);
+                //return dn;
+                // or we could double check
+                Attributes attributes = si.getAttributes();
+                NamingEnumeration<? extends Attribute> values = attributes.getAll();
+                while (values.hasMore()) {
+                    Attribute attribute = values.next();
+                    String attributeName = attribute.getID();
+                    if (attributeName.equalsIgnoreCase("identifier")) {
+                        String attributeValue = (String) attribute.get();
+                        if (pid.getValue().equals(attributeValue)) {
+                            return dn;
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("problem looking up DN for identifier: " + pid.getValue(), e);
+        }
+        return dn;
+    }
 
 }
