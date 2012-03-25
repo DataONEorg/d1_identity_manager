@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javax.naming.NameAlreadyBoundException;
+import javax.naming.NameNotFoundException;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
 import javax.naming.directory.Attribute;
@@ -536,12 +537,12 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 
 	@Override
 	public SubjectInfo getSubjectInfo(Session session, Subject subject)
-    	throws ServiceFailure, NotAuthorized, NotImplemented {
+    	throws ServiceFailure, NotAuthorized, NotImplemented, NotFound {
 		return getSubjectInfo(session, subject, true);
 	}
 	
 	private SubjectInfo getSubjectInfo(Session session, Subject subject, boolean recurse)
-    	throws ServiceFailure, NotAuthorized, NotImplemented {
+    	throws ServiceFailure, NotAuthorized, NotImplemented, NotFound {
 
 		// check redaction policy
 		boolean redact = shouldRedact(session);
@@ -561,12 +562,15 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		}
 		
 		SubjectInfo subjectInfo = new SubjectInfo();
-	    String dn = subject.getValue();
+                String dn = subject.getValue();
 		try {
 			DirContext ctx = getContext();
 			Attributes attributes = ctx.getAttributes(dn);
 			subjectInfo = processAttributes(dn, attributes, recurse, false, redact);
 			log.debug("Retrieved SubjectList for: " + dn);
+                } catch (NameNotFoundException ex) {
+                    log.warn("Could not find: " + dn + " : in Ldap: " + ex.getMessage());
+                    throw new NotFound("4564", ex.getMessage());
 		} catch (Exception e) {
 			String msg = "Problem looking up entry: " + dn + " : " + e.getMessage();
 	    	log.error(msg, e);
