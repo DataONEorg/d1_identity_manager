@@ -1137,4 +1137,69 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 			e.printStackTrace();
 		}
 	}
+
+    @Override
+    public Subject registerAccount(Person person) throws ServiceFailure, NotAuthorized, IdentifierNotUnique, InvalidCredentials, NotImplemented, InvalidRequest, InvalidToken {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public Subject updateAccount(Person person) throws ServiceFailure, NotAuthorized, InvalidCredentials, NotImplemented, InvalidRequest, InvalidToken, NotFound {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public boolean verifyAccount(Subject subject) throws ServiceFailure, NotAuthorized, NotImplemented, InvalidToken, InvalidRequest, NotFound {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public SubjectInfo getSubjectInfo(Subject subject) throws ServiceFailure, NotAuthorized, NotImplemented, NotFound, InvalidToken {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public SubjectInfo listSubjects(String query, String status, Integer start, Integer count) throws InvalidRequest, ServiceFailure, InvalidToken, NotAuthorized, NotImplemented {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public boolean mapIdentity(Subject primarySubject, Subject secondarySubject) throws ServiceFailure, InvalidToken, NotAuthorized, NotFound, NotImplemented, InvalidRequest, IdentifierNotUnique {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public boolean requestMapIdentity(Subject subject) throws ServiceFailure, InvalidToken, NotAuthorized, NotFound, NotImplemented, InvalidRequest, IdentifierNotUnique {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public boolean confirmMapIdentity(Subject subject) throws ServiceFailure, InvalidToken, NotAuthorized, NotFound, NotImplemented {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public SubjectInfo getPendingMapIdentity(Subject subject) throws ServiceFailure, InvalidToken, NotAuthorized, NotFound, NotImplemented {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public boolean denyMapIdentity(Subject subject) throws ServiceFailure, InvalidToken, NotAuthorized, NotFound, NotImplemented {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public boolean removeMapIdentity(Subject subject) throws ServiceFailure, InvalidToken, NotAuthorized, NotFound, NotImplemented {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public Subject createGroup(Group group) throws ServiceFailure, InvalidToken, NotAuthorized, NotImplemented, IdentifierNotUnique {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public boolean updateGroup(Group group) throws ServiceFailure, InvalidToken, NotAuthorized, NotFound, NotImplemented, InvalidRequest {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
 }
