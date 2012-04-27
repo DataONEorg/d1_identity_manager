@@ -560,10 +560,10 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	@Override
 	public SubjectInfo getSubjectInfo(Session session, Subject subject)
     	throws ServiceFailure, NotAuthorized, NotImplemented, NotFound {
-		return getSubjectInfo(session, subject, true);
+		return getSubjectInfo(session, subject, true, subject.getValue());
 	}
 	
-	private SubjectInfo getSubjectInfo(Session session, Subject subject, boolean recurse)
+	private SubjectInfo getSubjectInfo(Session session, Subject subject, boolean recurse, String originatingSubject)
     	throws ServiceFailure, NotAuthorized, NotImplemented, NotFound {
 
 		// check redaction policy
@@ -584,13 +584,13 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		}
 		
 		SubjectInfo subjectInfo = new SubjectInfo();
-                String dn = subject.getValue();
+        String dn = subject.getValue();
 		try {
 			DirContext ctx = getContext();
 			Attributes attributes = ctx.getAttributes(dn);
-			subjectInfo = processAttributes(dn, attributes, recurse, false, redact);
+			subjectInfo = processAttributes(dn, attributes, recurse, false, redact, originatingSubject);
 			log.debug("Retrieved SubjectList for: " + dn);
-                } catch (NameNotFoundException ex) {
+		} catch (NameNotFoundException ex) {
                     log.warn("Could not find: " + dn + " : in Ldap: " + ex.getMessage());
                     throw new NotFound("4564", ex.getMessage());
 		} catch (Exception e) {
@@ -631,7 +631,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	            log.debug("Search result found for: " + dn);
 	            Attributes attrs = si.getAttributes();
 	            // DO NOT look up other details about matching Groups or Persons, nor include equivalentIdentity requests
-	            SubjectInfo resultList = processAttributes(dn, attrs, false, false, redact);
+	            SubjectInfo resultList = processAttributes(dn, attrs, false, false, redact, dn);
                 if (resultList != null) {
                 	// add groups
 	                for (Group group: resultList.getGroupList()) {
@@ -697,7 +697,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	            log.debug("Search result found for: " + dn);
 	            Attributes attrs = si.getAttributes();
 	            // DO NOT look up other details about matching Groups or Persons, nor include equivalentIdentity requests
-	            SubjectInfo resultList = processAttributes(dn, attrs, false, false, redact);
+	            SubjectInfo resultList = processAttributes(dn, attrs, false, false, redact, dn);
                 if (resultList != null) {
                 	// add groups
 	                for (Group group: resultList.getGroupList()) {
@@ -741,12 +741,15 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 //    	return subject.getValue().equals(Constants.SUBJECT_PUBLIC);
 //    }
 
-	private SubjectInfo processAttributes(String name, Attributes attributes, boolean recurse, boolean equivalentIdentityRequestsOnly, boolean redact) throws Exception {
+	private SubjectInfo processAttributes(String name, Attributes attributes, 
+			boolean recurse, boolean equivalentIdentityRequestsOnly, boolean redact, 
+			String originatingSubject) throws Exception {
 
 		SubjectInfo pList = new SubjectInfo();
 
 		// convert to use the standardized string representation
 		name = CertificateManager.getInstance().standardizeDN(name);
+		originatingSubject = CertificateManager.getInstance().standardizeDN(originatingSubject);
 
 		if (attributes != null) {
 			NamingEnumeration<String> objectClasses = (NamingEnumeration<String>) attributes.get("objectClass").getAll();
@@ -792,8 +795,8 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 							log.debug("Found attribute: " + attributeName + "=" + attributeValue);
 							// look up details for this Group member?
 							if (recurse) {
-								// only one level of recursion
-								SubjectInfo groupInfo = this.getSubjectInfo(null, member, false);
+								// only one level of recursion for groups
+								SubjectInfo groupInfo = this.getSubjectInfo(null, member, false, originatingSubject);
 								// has people as members?
 								if (groupInfo.getPersonList() != null) {
 									for (Person p: groupInfo.getPersonList()) {
@@ -870,10 +873,14 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 								log.debug("Found attribute: " + attributeName + "=" + attributeValue);
 								// add this identity to the subject list?
 								if (recurse) {
+									// if we have recursed back to the original identity, then skip it
+									if (originatingSubject != null && originatingSubject.equals(equivalentIdentityRequest.getValue())) {
+										continue;
+									}
 									// catch the NotFound in case we only have the subject's DN
 									try {
-										// only one level of recursion
-										SubjectInfo equivalentIdentityRequestInfo = this.getSubjectInfo(null, equivalentIdentityRequest, false);
+										// recurse for equivalent identity requests
+										SubjectInfo equivalentIdentityRequestInfo = this.getSubjectInfo(null, equivalentIdentityRequest, true, originatingSubject);
 										if (equivalentIdentityRequestInfo.getPersonList() != null) {
 											for (Person p: equivalentIdentityRequestInfo.getPersonList()) {
 												pList.addPerson(p);
@@ -910,10 +917,14 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 								log.debug("Found attribute: " + attributeName + "=" + attributeValue);
 								// add this identity to the subject list
 								if (recurse) {
+									// if we have recurse back to the original identity, then skip it
+									if (originatingSubject != null && originatingSubject.equals(equivalentIdentity.getValue())) {
+										continue;
+									}
 									// allow case where the identity is not found
 									try {
-										// only one level of recursion
-										SubjectInfo equivalentIdentityInfo = this.getSubjectInfo(null, equivalentIdentity, false);
+										// recurse for equivalent identities
+										SubjectInfo equivalentIdentityInfo = this.getSubjectInfo(null, equivalentIdentity, true, originatingSubject);
 										if (equivalentIdentityInfo.getPersonList() != null) {
 											for (Person p: equivalentIdentityInfo.getPersonList()) {
 												pList.addPerson(p);
@@ -1025,7 +1036,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 			DirContext ctx = getContext();
 			Attributes attributes = ctx.getAttributes(dn);
 			// include the equivalent identity requests only
-			subjectInfo = processAttributes(dn, attributes, true, true, redact);
+			subjectInfo = processAttributes(dn, attributes, true, true, redact, dn);
 			log.debug("Retrieved SubjectList for: " + dn);
 		} catch (Exception e) {
 			String msg = "Problem looking up entry: " + dn + " : " + e.getMessage();
