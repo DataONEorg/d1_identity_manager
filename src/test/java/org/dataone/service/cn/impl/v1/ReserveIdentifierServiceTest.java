@@ -35,7 +35,6 @@ import javax.naming.NamingException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.dataone.configuration.Settings;
-import org.dataone.service.exceptions.IdentifierNotUnique;
 import org.dataone.service.exceptions.NotAuthorized;
 import org.dataone.service.types.v1.Identifier;
 import org.dataone.service.types.v1.Session;
@@ -59,10 +58,7 @@ public class ReserveIdentifierServiceTest {
     public static Log log = LogFactory.getLog(ReserveIdentifierServiceTest.class);
 
 	// use Configuration to look up testing values
-	private String server = Settings.getConfiguration().getString("test.ldap.server.1");
-	private String serverReplica = Settings.getConfiguration().getString("test.ldap.server.1");
-	private int replicationDelay = Settings.getConfiguration().getInt("test.replicationDelay"); // milliseconds
-	private int replicationAttempts = Settings.getConfiguration().getInt("test.replicationAttempts");
+	//private String server = Settings.getConfiguration().getString("test.ldap.server.1");
 
 	private String primarySubject = Settings.getConfiguration().getString("test.primarySubject");
 	private String secondarySubject = Settings.getConfiguration().getString("test.secondarySubject");
@@ -128,7 +124,7 @@ public class ReserveIdentifierServiceTest {
 			boolean check = false;
 
 			Identifier retPid = null;
-			service.setServer(server);
+			//service.setServer(server);
 			retPid = service.reserveIdentifier(getSession(subject), pid);
 			assertNotNull(retPid);
 
@@ -158,7 +154,7 @@ public class ReserveIdentifierServiceTest {
 	@Test
 	public void expire()  {
 		ReserveIdentifierService service = new ReserveIdentifierService();
-		service.setServer(server);
+		//service.setServer(server);
 		try {
 			service.expireEntries(0);
 		} catch (NamingException e) {
@@ -189,7 +185,7 @@ public class ReserveIdentifierServiceTest {
             boolean check = false;
 
             Identifier retPid = null;
-            service.setServer(server);
+            //service.setServer(server);
             retPid = service.generateIdentifier(getSession(subject), "UUID", null);
             log.debug("Generated PID: " + retPid.getValue());
             assertNotNull(retPid);
