@@ -9,7 +9,7 @@
     <url>http://dataone.org</url>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <d1_libclient_version>1.0.1-RC7-SNAPSHOT</d1_libclient_version>
+        <d1_libclient_version>1.0.1-RC9-SNAPSHOT</d1_libclient_version>
         <d1_cn_noderegistry_version>1.0.0-RC6-SNAPSHOT</d1_cn_noderegistry_version>
     </properties>
     <repositories>
