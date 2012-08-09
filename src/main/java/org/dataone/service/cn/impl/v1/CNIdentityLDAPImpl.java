@@ -800,7 +800,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 								// has people as members?
 								if (groupInfo.getPersonList() != null) {
 									for (Person p: groupInfo.getPersonList()) {
-										if (!pList.getPersonList().contains(p)) {
+										if (!contains(pList.getPersonList(), p)) {
 											pList.addPerson(p);
 										}
 									}
@@ -808,7 +808,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 								// has other groups as members?
 								if (groupInfo.getGroupList() != null) {
 									for (Group g: groupInfo.getGroupList()) {
-										if (!pList.getGroupList().contains(g)) {
+										if (!contains(pList.getGroupList(), g)) {
 											pList.addGroup(g);
 										}
 									}
@@ -818,7 +818,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 					}
 				}
 				// only add if we don't already have it in the group list (from recursion)
-				if (!pList.getGroupList().contains(group)) {
+				if (!contains(pList.getGroupList(), group)) {
 					pList.getGroupList().add(0, group);
 				}
 
@@ -890,14 +890,14 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 										SubjectInfo equivalentIdentityRequestInfo = this.getSubjectInfo(null, equivalentIdentityRequest, true, originatingSubject);
 										if (equivalentIdentityRequestInfo.getPersonList() != null) {
 											for (Person p: equivalentIdentityRequestInfo.getPersonList()) {
-												if (!pList.getPersonList().contains(p)) {
+												if (!contains(pList.getPersonList(), p)) {
 													pList.addPerson(p);
 												}
 											}
 										}
 										if (equivalentIdentityRequestInfo.getGroupList() != null) {
 											for (Group g: equivalentIdentityRequestInfo.getGroupList()) {
-												if (!pList.getGroupList().contains(g)) {
+												if (!contains(pList.getGroupList(), g)) {
 													pList.addGroup(g);
 												}
 											}
@@ -911,7 +911,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 										placeholderPerson.addEmail("NA");
 										placeholderPerson.addGivenName("NA");
 										placeholderPerson.setFamilyName("NA");
-										if (!pList.getPersonList().contains(placeholderPerson)) {
+										if (!contains(pList.getPersonList(), placeholderPerson)) {
 											pList.addPerson(placeholderPerson);
 										}
 									}
@@ -940,14 +940,14 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 										SubjectInfo equivalentIdentityInfo = this.getSubjectInfo(null, equivalentIdentity, true, originatingSubject);
 										if (equivalentIdentityInfo.getPersonList() != null) {
 											for (Person p: equivalentIdentityInfo.getPersonList()) {
-												if (!pList.getPersonList().contains(p)) {
+												if (!contains(pList.getPersonList(), p)) {
 													pList.addPerson(p);
 												}
 											}
 										}
 										if (equivalentIdentityInfo.getGroupList() != null) {
 											for (Group g: equivalentIdentityInfo.getGroupList()) {
-												if (!pList.getGroupList().contains(g)) {
+												if (!contains(pList.getGroupList(), g)) {
 													pList.addGroup(g);
 												}
 											}
@@ -961,7 +961,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 										placeholderPerson.addEmail("NA");
 										placeholderPerson.addGivenName("NA");
 										placeholderPerson.setFamilyName("NA");
-										if (!pList.getPersonList().contains(placeholderPerson)) {
+										if (!contains(pList.getPersonList(), placeholderPerson)) {
 											pList.addPerson(placeholderPerson);
 										}
 									}
@@ -976,13 +976,13 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 				List<Group> groups = lookupGroups(name);
 				for (Group g: groups) {
 					person.addIsMemberOf(g.getSubject());
-					if (!pList.getGroupList().contains(g)){
+					if (!contains(pList.getGroupList(), g)){
 						pList.getGroupList().add(g);
 					}
 				}
 				
 				// add as the first one in the list
-				if (!pList.getPersonList().contains(person)) {
+				if (!contains(pList.getPersonList(), person)) {
 					pList.getPersonList().add(0, person);
 				}
 			}
@@ -1152,19 +1152,37 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		} 
 		return true;
 	}
+	
+	private static boolean contains(List<Person> personList, Person person) {
+		for (Person p: personList) {
+			if (p.getSubject().equals(person.getSubject())) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	private static boolean contains(List<Group> groupList, Group group) {
+		for (Group g: groupList) {
+			if (g.getSubject().equals(group.getSubject())) {
+				return true;
+			}
+		}
+		return false;
+	}
 
 	public static void main(String[] args) {
 		try {
 
 			Subject p = new Subject();
 //			p.setValue("cn=testGroup,dc=cilogon,dc=org");
-			p.setValue("CN=Benjamin Leinfelder A458,O=University of Chicago,C=US,DC=cilogon,DC=org");
+			p.setValue("CN=BRL,DC=cilogon,DC=org");
 
 			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
-			identityService.setServer("ldap://cn-dev.dataone.org:389");
+			identityService.setServer("ldap://localhost:3890");
 			//identityService.removeSubject(p);
 			SubjectInfo si = identityService.getSubjectInfo(null, p);
-			String subjectDn = si.getPerson(0).getSubject().getValue();
+			String subjectDn = si.getGroup(0).getGroupName();
 			System.out.println(subjectDn);
 
 		} catch (Exception e) {
