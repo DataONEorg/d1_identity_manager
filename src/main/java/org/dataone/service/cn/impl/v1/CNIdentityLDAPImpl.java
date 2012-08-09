@@ -701,11 +701,15 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
                 if (resultList != null) {
                 	// add groups
 	                for (Group group: resultList.getGroupList()) {
-		                pList.addGroup(group);
+	                	if (!contains(pList.getGroupList(), group)) {
+	                		pList.addGroup(group);
+	                	}
 	                }
 	                // add people
 	                for (Person person: resultList.getPersonList()) {
-		                pList.addPerson(person);
+	                	if (!contains(pList.getPersonList(), person)) {
+	                		pList.addPerson(person);
+	                	}
 	                }
                 }
 	        }
