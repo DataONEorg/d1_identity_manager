@@ -800,20 +800,27 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 								// has people as members?
 								if (groupInfo.getPersonList() != null) {
 									for (Person p: groupInfo.getPersonList()) {
-										pList.addPerson(p);
+										if (!pList.getPersonList().contains(p)) {
+											pList.addPerson(p);
+										}
 									}
 								}
 								// has other groups as members?
 								if (groupInfo.getGroupList() != null) {
 									for (Group g: groupInfo.getGroupList()) {
-										pList.addGroup(g);
+										if (!pList.getGroupList().contains(g)) {
+											pList.addGroup(g);
+										}
 									}
 								}
 							}
 						}
 					}
 				}
-				pList.getGroupList().add(0, group);
+				// only add if we don't already have it in the group list (from recursion)
+				if (!pList.getGroupList().contains(group)) {
+					pList.getGroupList().add(0, group);
+				}
 
 			} else {
 				// process as a person
@@ -883,12 +890,16 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 										SubjectInfo equivalentIdentityRequestInfo = this.getSubjectInfo(null, equivalentIdentityRequest, true, originatingSubject);
 										if (equivalentIdentityRequestInfo.getPersonList() != null) {
 											for (Person p: equivalentIdentityRequestInfo.getPersonList()) {
-												pList.addPerson(p);
+												if (!pList.getPersonList().contains(p)) {
+													pList.addPerson(p);
+												}
 											}
 										}
 										if (equivalentIdentityRequestInfo.getGroupList() != null) {
 											for (Group g: equivalentIdentityRequestInfo.getGroupList()) {
-												pList.addGroup(g);
+												if (!pList.getGroupList().contains(g)) {
+													pList.addGroup(g);
+												}
 											}
 										}
 									} catch (ServiceFailure e) {
@@ -900,7 +911,9 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 										placeholderPerson.addEmail("NA");
 										placeholderPerson.addGivenName("NA");
 										placeholderPerson.setFamilyName("NA");
-										pList.addPerson(placeholderPerson);
+										if (!pList.getPersonList().contains(placeholderPerson)) {
+											pList.addPerson(placeholderPerson);
+										}
 									}
 								}
 							}
@@ -927,12 +940,16 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 										SubjectInfo equivalentIdentityInfo = this.getSubjectInfo(null, equivalentIdentity, true, originatingSubject);
 										if (equivalentIdentityInfo.getPersonList() != null) {
 											for (Person p: equivalentIdentityInfo.getPersonList()) {
-												pList.addPerson(p);
+												if (!pList.getPersonList().contains(p)) {
+													pList.addPerson(p);
+												}
 											}
 										}
 										if (equivalentIdentityInfo.getGroupList() != null) {
 											for (Group g: equivalentIdentityInfo.getGroupList()) {
-												pList.addGroup(g);
+												if (!pList.getGroupList().contains(g)) {
+													pList.addGroup(g);
+												}
 											}
 										}
 									} catch (ServiceFailure e) {
@@ -944,7 +961,9 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 										placeholderPerson.addEmail("NA");
 										placeholderPerson.addGivenName("NA");
 										placeholderPerson.setFamilyName("NA");
-										pList.addPerson(placeholderPerson);
+										if (!pList.getPersonList().contains(placeholderPerson)) {
+											pList.addPerson(placeholderPerson);
+										}
 									}
 								}
 							}
@@ -957,11 +976,15 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 				List<Group> groups = lookupGroups(name);
 				for (Group g: groups) {
 					person.addIsMemberOf(g.getSubject());
-					pList.addGroup(g);
+					if (!pList.getGroupList().contains(g)){
+						pList.getGroupList().add(g);
+					}
 				}
 				
 				// add as the first one in the list
-				pList.getPersonList().add(0, person);
+				if (!pList.getPersonList().contains(person)) {
+					pList.getPersonList().add(0, person);
+				}
 			}
 		}
 
