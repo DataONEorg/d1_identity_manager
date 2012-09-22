@@ -906,7 +906,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 												}
 											}
 										}
-									} catch (ServiceFailure e) {
+									} catch (NotFound e) {
 										// ignore NotFound
 										log.warn("No account found for equivalentIdentityRequest entry: " + equivalentIdentityRequest.getValue(), e);
 										// still add this placeholder
@@ -956,7 +956,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 												}
 											}
 										}
-									} catch (ServiceFailure e) {
+									} catch (NotFound e) {
 										// ignore NotFound
 										log.warn("No account found for equivalentIdentity entry: " + equivalentIdentity.getValue(), e);
 										// still add this placeholder
