@@ -29,10 +29,10 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import org.dataone.configuration.Settings;
+import org.dataone.service.exceptions.InvalidRequest;
 import org.dataone.service.exceptions.NotAuthorized;
 import org.dataone.service.types.v1.Group;
 import org.dataone.service.types.v1.Node;
-import org.dataone.service.types.v1.NodeType;
 import org.dataone.service.types.v1.Person;
 import org.dataone.service.types.v1.Session;
 import org.dataone.service.types.v1.Subject;
@@ -64,6 +64,8 @@ public class CNIdentityLDAPImplTest {
 	private String primarySubject = Settings.getConfiguration().getString("test.primarySubject");
 	private String secondarySubject = Settings.getConfiguration().getString("test.secondarySubject");
 	private String groupName = Settings.getConfiguration().getString("test.groupName");
+	private String secondaryGroupName = Settings.getConfiguration().getString("test.secondaryGroupName");
+
 
         NodeAccess nodeAccess = new NodeAccess();
         final static int SIZE = 16384;
@@ -218,6 +220,13 @@ public class CNIdentityLDAPImplTest {
 			Group group = new Group();
 			group.setGroupName(groupName);
 			group.setSubject(groupSubject);
+			
+			Subject secondaryGroupSubject = new Subject();
+			groupSubject.setValue(secondaryGroupName);
+			
+			Group secondaryGroup = new Group();
+			group.setGroupName(secondaryGroupName);
+			group.setSubject(secondaryGroupSubject);
 
 			// only add the secondary person because p1 is owner (member by default)
 			SubjectList members = new SubjectList();
@@ -246,6 +255,21 @@ public class CNIdentityLDAPImplTest {
 			group.setHasMemberList(null);
 			check = identityService.updateGroup(getSession(p1), group);
 			assertTrue(check);
+			
+			// create secondary group
+			retGroup = identityService.createGroup(getSession(p1), secondaryGroup);
+			assertNotNull(retGroup);
+			
+			// attempt to add members that are a Group (should fail)
+			members.getSubjectList().add(secondaryGroupSubject);
+			group.setHasMemberList(members.getSubjectList());
+			check = false;
+			try {
+				check = identityService.updateGroup(getSession(p1), group);
+			} catch (InvalidRequest e) {
+				// expected exception
+			}
+			assertFalse(check);
 
 			// clean up (this is not required for service to be functioning)
 			check = identityService.removeSubject(p1);
@@ -253,6 +277,8 @@ public class CNIdentityLDAPImplTest {
 			check = identityService.removeSubject(p2);
 			assertTrue(check);
 			check = identityService.removeSubject(groupSubject);
+			assertTrue(check);
+			check = identityService.removeSubject(secondaryGroupSubject);
 			assertTrue(check);
 
 		} catch (Exception e) {

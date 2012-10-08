@@ -216,6 +216,14 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 				sf.initCause(e);
 				throw sf;
 			}
+			// report the original error accurately
+			if (createException instanceof InvalidRequest) {
+				throw (InvalidRequest) createException;
+			} else {
+				ServiceFailure sf = new ServiceFailure("2490", "Could not update group: " + createException.getMessage());
+				sf.initCause(createException);
+				throw sf;
+			}
 		}	
 
     	return true;
