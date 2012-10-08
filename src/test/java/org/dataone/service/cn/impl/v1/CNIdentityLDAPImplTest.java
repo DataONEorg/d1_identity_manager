@@ -222,11 +222,11 @@ public class CNIdentityLDAPImplTest {
 			group.setSubject(groupSubject);
 			
 			Subject secondaryGroupSubject = new Subject();
-			groupSubject.setValue(secondaryGroupName);
+			secondaryGroupSubject.setValue(secondaryGroupName);
 			
 			Group secondaryGroup = new Group();
-			group.setGroupName(secondaryGroupName);
-			group.setSubject(secondaryGroupSubject);
+			secondaryGroup.setGroupName(secondaryGroupName);
+			secondaryGroup.setSubject(secondaryGroupSubject);
 
 			// only add the secondary person because p1 is owner (member by default)
 			SubjectList members = new SubjectList();
