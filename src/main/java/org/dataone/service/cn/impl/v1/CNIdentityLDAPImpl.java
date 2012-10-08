@@ -132,18 +132,18 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		    	// check if they are trying to add a group as a member
 		    	boolean memberIsGroup = false;
 		    	try {
-		    		List<Object> objectclassValues = this.getAttributeValues(member.getValue(), "objectclass");
-		    		if (objectclassValues.contains("groupOfUniqueNames")) {
+		    		List<Object> values = this.getAttributeValues(member.getValue(), "uniqueMember");
+		    		if (!values.isEmpty()) {
 		    			memberIsGroup = true;
-		    			// throw error, rather than just continuing without this member
-		    			throw new InvalidRequest("0000", "Group member: + " + member.getValue() + " cannot be another Group");
-		    			
 		    		}
 		    	} catch (Exception e) {
 					log.warn("Could not check whether member subject is a group: " + e.getMessage());
 				}
-		    	// do not let them do this
-		    	if (!memberIsGroup) {
+
+		    	// throw error, rather than just continuing without this member
+	    		if (memberIsGroup) {
+	    			throw new InvalidRequest("0000", "Group member: " + member.getValue() + " cannot be another Group");
+	    		} else {
 		    		uniqueMembers.add(member.getValue());
 		    	}
 		    }
@@ -1222,15 +1222,16 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		try {
 
 			Subject p = new Subject();
-//			p.setValue("cn=testGroup,dc=cilogon,dc=org");
-			p.setValue("CN=BRL,DC=cilogon,DC=org");
+			p.setValue("cn=testGroup2,dc=cilogon,dc=org");
+//			p.setValue("CN=BRL,DC=cilogon,DC=org");
 
 			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
-			identityService.setServer("ldap://localhost:3890");
-			//identityService.removeSubject(p);
-			SubjectInfo si = identityService.getSubjectInfo(null, p);
-			String subjectDn = si.getGroup(0).getGroupName();
-			System.out.println(subjectDn);
+			identityService.setServer("ldap://bespin.nceas.ucsb.edu:389");
+//			identityService.setServer("ldap://fred.msi.ucsb.edu:389");
+			identityService.removeSubject(p);
+//			SubjectInfo si = identityService.getSubjectInfo(null, p);
+//			String subjectDn = si.getGroup(0).getGroupName();
+//			System.out.println(subjectDn);
 
 		} catch (Exception e) {
 			e.printStackTrace();
