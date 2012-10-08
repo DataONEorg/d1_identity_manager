@@ -97,7 +97,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
     @Override    
 	public Subject createGroup(Session session, Group group) throws ServiceFailure,
 			InvalidToken, NotAuthorized, NotImplemented,
-			IdentifierNotUnique {
+			IdentifierNotUnique, InvalidRequest {
 
     	Subject groupName = group.getSubject();
 	    Subject groupAdmin = session.getSubject();
@@ -125,10 +125,27 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	    // 'uniqueMember' is required, so always add the creator
 	    Attribute uniqueMembers = new BasicAttribute("uniqueMember");
 	    uniqueMembers.add(groupAdmin.getValue());
+	    
 	    // add all other members as 'uniqueMembers'
 	    if (group.getHasMemberList() != null) {
 		    for (Subject member: group.getHasMemberList()) {
-		    	uniqueMembers.add(member.getValue());
+		    	// check if they are trying to add a group as a member
+		    	boolean memberIsGroup = false;
+		    	try {
+		    		List<Object> objectclassValues = this.getAttributeValues(member.getValue(), "objectclass");
+		    		if (objectclassValues.contains("groupOfUniqueNames")) {
+		    			memberIsGroup = true;
+		    			// throw error, rather than just continuing without this member
+		    			throw new InvalidRequest("0000", "Group member: + " + member.getValue() + " cannot be another Group");
+		    			
+		    		}
+		    	} catch (Exception e) {
+					log.warn("Could not check whether member subject is a group: " + e.getMessage());
+				}
+		    	// do not let them do this
+		    	if (!memberIsGroup) {
+		    		uniqueMembers.add(member.getValue());
+		    	}
 		    }
 	    }
 
@@ -161,27 +178,45 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
     public boolean updateGroup(Session session, Group group)
     	throws ServiceFailure, InvalidToken, NotAuthorized, NotFound, NotImplemented, InvalidRequest {
 
+		Subject groupSubject = group.getSubject();
+		
+		// back up the original before updating
+		SubjectInfo originalGroup = this.getSubjectInfo(session, groupSubject);
+		
 		try {
-    		Subject groupSubject = group.getSubject();
     		
     		// will throw NotAuthorized if not true		
 			boolean canEdit = canEditGroup(session, groupSubject);
-			
+						
 			// remove the group
 			this.removeSubject(groupSubject);
-			
-			// recreate the group using the provided input
-			this.createGroup(session, group);
 			
 		} catch (NamingException e) {
 			ServiceFailure sf = new ServiceFailure("2490", "Could not update group: " + e.getMessage());
 			sf.initCause(e);
 			throw sf;
-		} catch (IdentifierNotUnique e) {
-			ServiceFailure sf = new ServiceFailure("2490", "Could not update group: " + e.getMessage());
-			sf.initCause(e);
-			throw sf;
 		}
+		
+		// recreate the group using the provided input
+		Exception createException = null;
+		try {
+			this.createGroup(session, group);
+		} catch (IdentifierNotUnique e) {
+			createException = e;
+		} catch (InvalidRequest e) {
+			createException = e;
+		}
+		
+		// recreate what we deleted if there was an error
+		if (createException != null) {
+			try {
+				this.createGroup(session, originalGroup.getGroup(0));
+			} catch (IdentifierNotUnique e) {
+				ServiceFailure sf = new ServiceFailure("2490", "Could not recreate original group after update failed: " + e.getMessage());
+				sf.initCause(e);
+				throw sf;
+			}
+		}	
 
     	return true;
 
