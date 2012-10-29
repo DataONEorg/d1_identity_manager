@@ -229,14 +229,14 @@ public class ReserveIdentifierService extends LDAPService {
 	}
 
 	public boolean hasReservation(Session session, Subject subject, Identifier pid) throws NotAuthorized, NotFound, IdentifierNotUnique {
-		
+		log.debug("hasReservation for Subject:" + subject.getValue() + " with pid: " + pid.getValue());
 		// check hz for existing system metadata on this pid
 		String mapName = Settings.getConfiguration().getString("dataone.hazelcast.systemMetadata");
 		Object sysMeta = HazelcastClientInstance.getHazelcastClient().getMap(mapName).get(pid);
 		if (sysMeta != null) {
             throw new IdentifierNotUnique("4925", "The given pid is already in use: " + pid.getValue());
 		}
-		
+		log.debug("SystemMetadata is null from SystemMetadata map");
 		// look up the SubjectInfo
 		SubjectInfo subjectInfo = null;
 		try {
@@ -244,7 +244,7 @@ public class ReserveIdentifierService extends LDAPService {
 		} catch (Exception e) {
 			log.warn("Could not look up SubjectInfo for: " + subject);
 		}
-		
+		log.debug("SubjectInfo retrieved");
 		List<Subject> subjects = new ArrayList<Subject>();
 		if (subjectInfo != null) {
 			// equivalent ids
@@ -267,7 +267,7 @@ public class ReserveIdentifierService extends LDAPService {
 
 		// look up the identifier
 		String dn = lookupDN(pid);
-
+                log.debug("Looked up DN");
 		if (dn == null) {
 			String msg = "No reservation found for pid: " + pid.getValue();
 			throw new NotFound("4923", msg);
