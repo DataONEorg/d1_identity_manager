@@ -37,6 +37,7 @@ import javax.naming.directory.DirContext;
 import javax.naming.directory.ModificationItem;
 import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
+import javax.naming.ldap.LdapName;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -320,31 +321,34 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	        ModificationItem[] mods = null;
 	        Attribute mod0 = null;
 	        
+	        String primaryDN = new LdapName(primarySubject.getValue()).toString();
+	        String secondaryDN = new LdapName(secondarySubject.getValue()).toString();
+
 	        // mark primary as having the equivalentIdentity
 	        try {
 		        mods = new ModificationItem[1];
-		        mod0 = new BasicAttribute("equivalentIdentity", secondarySubject.getValue());
+		        mod0 = new BasicAttribute("equivalentIdentity", secondaryDN);
 		        mods[0] = new ModificationItem(DirContext.ADD_ATTRIBUTE, mod0);
 		        // make the change
-		        ctx.modifyAttributes(primarySubject.getValue(), mods);
-		        log.debug("Successfully set equivalentIdentity on: " + primarySubject.getValue() + " for " + secondarySubject.getValue());
+		        ctx.modifyAttributes(primaryDN, mods);
+		        log.debug("Successfully set equivalentIdentity on: " + primaryDN + " for " + secondaryDN);
 	        } catch (Exception e) {
 				// one failure is OK, two is not
-		        log.warn("Could not set equivalentIdentity on: " + primarySubject.getValue() + " for " + secondarySubject.getValue(), e);
+		        log.warn("Could not set equivalentIdentity on: " + primaryDN + " for " + secondaryDN, e);
 		        failureCount++;
 			}
 	        
         	// mark secondary as having the equivalentIdentity
 	        try {
 		        mods = new ModificationItem[1];
-		        mod0 = new BasicAttribute("equivalentIdentity", primarySubject.getValue());
+		        mod0 = new BasicAttribute("equivalentIdentity", primaryDN);
 		        mods[0] = new ModificationItem(DirContext.ADD_ATTRIBUTE, mod0);
 		        // make the change
-		        ctx.modifyAttributes(secondarySubject.getValue(), mods);
-		        log.debug("Successfully set equivalentIdentity on: " + secondarySubject.getValue() + " for " + primarySubject.getValue());
+		        ctx.modifyAttributes(secondaryDN, mods);
+		        log.debug("Successfully set equivalentIdentity on: " + secondaryDN + " for " + primaryDN);
 	        } catch (Exception e) {
 				// one failure is OK, two is not
-		        log.warn("Could not set equivalentIdentity on: " + secondarySubject.getValue() + " for " + primarySubject.getValue(), e);
+		        log.warn("Could not set equivalentIdentity on: " + secondaryDN + " for " + primaryDN, e);
 		        failureCount++;
 			}
 	        
