@@ -22,7 +22,7 @@
 
 package org.dataone.service.cn.impl.v1;
 
-import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import javax.naming.NameAlreadyBoundException;
@@ -63,6 +63,7 @@ import org.dataone.service.types.v1.Subject;
 import org.dataone.service.types.v1.SubjectInfo;
 import org.dataone.service.cn.impl.v1.NodeRegistryService;
 import org.dataone.service.types.v1.NodeList;
+import org.dataone.service.types.v1.util.AuthUtils;
 import org.dataone.service.types.v1.util.ServiceMethodRestrictionUtil;
 
 /**
@@ -235,20 +236,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		// check that they have admin rights for group
         boolean canEdit = false;
         // collect all equivalent IDs for this session
-        List<Subject> sessionSubjects = new ArrayList<Subject>();
-        sessionSubjects.add(session.getSubject());
-        // equivalent people
-        if (session.getSubjectInfo() != null && session.getSubjectInfo().getPersonList() != null) {
-        	for (Person p: session.getSubjectInfo().getPersonList()) {
-        		sessionSubjects.add(p.getSubject());
-        	}
-        }
-        // group membership
-        if (session.getSubjectInfo() != null && session.getSubjectInfo().getGroupList() != null) {
-        	for (Group g: session.getSubjectInfo().getGroupList()) {
-        		sessionSubjects.add(g.getSubject());
-        	}
-        }
+        Collection<Subject> sessionSubjects = AuthUtils.authorizedClientSubjects(session);
  
         // find the admin list of the group
         List<Object> owners = this.getAttributeValues(groupName.getValue(), "owner");
@@ -256,7 +244,12 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
         // do any of our subjects match the owners?
         ownerSearch:
         for (Subject user: sessionSubjects) {
-	        String userDN = CertificateManager.getInstance().standardizeDN(user.getValue());
+	        String userDN = user.getValue();
+        	try {
+    	        userDN = CertificateManager.getInstance().standardizeDN(userDN);
+        	} catch (IllegalArgumentException iae) {
+        		// ignore, "public", "verified" etc...
+        	}
 	        for (Object ownerObj: owners) {
 	        	String owner = (String) ownerObj;
 	        	owner = CertificateManager.getInstance().standardizeDN(owner);
@@ -270,6 +263,38 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
         // throw exception if not authorized
         if (!canEdit) {
         	throw new NotAuthorized("2560", "Subject not in owner list for group");
+        }
+        
+        return canEdit;
+	}
+	
+	private boolean canEditPerson(Session session, Subject personSubject) throws NotAuthorized {
+		// check that they have rights for person
+        boolean canEdit = false;
+        // collect all equivalent IDs for this session
+        Collection<Subject> sessionSubjects = null;
+        sessionSubjects = AuthUtils.authorizedClientSubjects(session);
+        
+        // do any of our subjects match the subject being edited?
+        for (Subject user: sessionSubjects) {
+	        String sessionDN = user.getValue();
+        	try {
+    	        sessionDN = CertificateManager.getInstance().standardizeDN(sessionDN);
+        	} catch (IllegalArgumentException iae) {
+        		// ignore, "public", "verified" etc...
+        	}
+        	String listedDN = personSubject.getValue();
+        	listedDN = CertificateManager.getInstance().standardizeDN(listedDN);
+
+        	if (sessionDN.equals(listedDN)) {
+        		canEdit = true;
+        		break;
+        	}
+	    }
+        
+        // throw exception if not authorized
+        if (!canEdit) {
+        	throw new NotAuthorized("4534", "Subject not allowed to edit subject");
         }
         
         return canEdit;
@@ -455,10 +480,13 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 
 	@Override
 	public Subject updateAccount(Session session, Person p) throws ServiceFailure,
-		InvalidCredentials, NotImplemented, InvalidRequest {
+		InvalidCredentials, NotImplemented, InvalidRequest, NotAuthorized {
 
 		Subject subject = p.getSubject();
 
+		// will throw an exception
+		canEditPerson(session, subject);
+		
 		try {
 			// the DN
 			String dn = subject.getValue();
