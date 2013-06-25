@@ -31,6 +31,7 @@ import static org.junit.Assert.fail;
 import org.dataone.configuration.Settings;
 import org.dataone.service.exceptions.InvalidRequest;
 import org.dataone.service.exceptions.NotAuthorized;
+import org.dataone.service.exceptions.NotFound;
 import org.dataone.service.types.v1.Group;
 import org.dataone.service.types.v1.Node;
 import org.dataone.service.types.v1.Person;
@@ -307,7 +308,13 @@ public class CNIdentityLDAPImplTest {
                     ByteArrayInputStream bArrayInputStream = new ByteArrayInputStream(cnNodeOutput.toByteArray());
                     Node testCNNode = TypeMarshaller.unmarshalTypeFromStream(Node.class, bArrayInputStream);
 
-                    NodeReference cnNodeReference = nodeRegistryService.register(testCNNode);
+                    NodeReference cnNodeReference = testCNNode.getIdentifier();
+                    try {
+                    	nodeRegistryService.getNode(testCNNode.getIdentifier());
+                    } catch (NotFound nf) {
+                    	cnNodeReference = nodeRegistryService.register(testCNNode);
+                    }
+                    
                     assertNotNull(cnNodeReference);
                     testCNNode.setIdentifier(cnNodeReference);
                     nodeAccess.setNodeApproved(cnNodeReference, Boolean.TRUE);
@@ -568,26 +575,32 @@ public class CNIdentityLDAPImplTest {
 	public void mapIdentity() throws Exception  {
 
 		try {
-	            NodeRegistryService nodeRegistryService = new NodeRegistryService();
+            NodeRegistryService nodeRegistryService = new NodeRegistryService();
 
-                    ByteArrayOutputStream cnNodeOutput = new ByteArrayOutputStream();
+            ByteArrayOutputStream cnNodeOutput = new ByteArrayOutputStream();
 
-                    InputStream is = this.getClass().getResourceAsStream("/org/dataone/resources/samples/v1/cnNode.xml");
+            InputStream is = this.getClass().getResourceAsStream("/org/dataone/resources/samples/v1/cnNode.xml");
 
-                    BufferedInputStream bInputStream = new BufferedInputStream(is);
-                    byte[] barray = new byte[SIZE];
-                    int nRead = 0;
-                    while ((nRead = bInputStream.read(barray, 0, SIZE)) != -1) {
-                        cnNodeOutput.write(barray, 0, nRead);
-                    }
-                    bInputStream.close();
-                    ByteArrayInputStream bArrayInputStream = new ByteArrayInputStream(cnNodeOutput.toByteArray());
-                    Node testCNNode = TypeMarshaller.unmarshalTypeFromStream(Node.class, bArrayInputStream);
-
-                    NodeReference cnNodeReference = nodeRegistryService.register(testCNNode);
-                    assertNotNull(cnNodeReference);
-                    testCNNode.setIdentifier(cnNodeReference);
-                    nodeAccess.setNodeApproved(cnNodeReference, Boolean.TRUE);
+            BufferedInputStream bInputStream = new BufferedInputStream(is);
+            byte[] barray = new byte[SIZE];
+            int nRead = 0;
+            while ((nRead = bInputStream.read(barray, 0, SIZE)) != -1) {
+                cnNodeOutput.write(barray, 0, nRead);
+            }
+            bInputStream.close();
+            ByteArrayInputStream bArrayInputStream = new ByteArrayInputStream(cnNodeOutput.toByteArray());
+            Node testCNNode = TypeMarshaller.unmarshalTypeFromStream(Node.class, bArrayInputStream);
+            
+            NodeReference cnNodeReference = testCNNode.getIdentifier();
+            try {
+            	nodeRegistryService.getNode(testCNNode.getIdentifier());
+            } catch (NotFound nf) {
+            	cnNodeReference = nodeRegistryService.register(testCNNode);
+            }
+            assertNotNull(cnNodeReference);
+            testCNNode.setIdentifier(cnNodeReference);
+            nodeAccess.setNodeApproved(cnNodeReference, Boolean.TRUE);
+            
 			Subject p1 = new Subject();
 			p1.setValue(primarySubject);
 			Person person1 = new Person();
