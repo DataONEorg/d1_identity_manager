@@ -329,7 +329,11 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
         sessionSubject = session.getSubject();
         isAllowed = ServiceMethodRestrictionUtil.isMethodAllowed(sessionSubject, nodeList, "CNIdentity", "mapIdentity");
         if (!isAllowed) {
-        	throw new NotAuthorized("2360", sessionSubject.getValue() + " is not allowed to map identities");
+        	String sessionSubjectValue = null;
+        	if (sessionSubject != null) {
+        		sessionSubjectValue = sessionSubject.getValue();
+        	}
+			throw new NotAuthorized("2360", sessionSubjectValue  + " is not allowed to map identities");
         }
         
         // check for pre-existing mapping
@@ -536,6 +540,26 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	@Override
 	public boolean verifyAccount(Session session, Subject subject) throws ServiceFailure,
 			NotAuthorized, NotImplemented, InvalidToken, InvalidRequest {
+		
+		// checks if we are allowed to call this method -- should be very restricted
+        List<Node> nodeList = null;
+        try {
+        	nodeList = nodeRegistryService.listNodes().getNodeList();
+        } catch (Exception e) {
+                // will only get here if running outside the context of the CN deployment
+                log.warn("Using D1Client to look up nodeList from CN");
+                nodeList = D1Client.getCN().listNodes().getNodeList();
+        }
+        
+        Subject sessionSubject = session.getSubject();
+        boolean isAllowed = ServiceMethodRestrictionUtil.isMethodAllowed(sessionSubject, nodeList, "CNIdentity", "verifyAccount");
+        if (!isAllowed) {
+        	String sessionSubjectValue = null;
+        	if (sessionSubject != null) {
+        		sessionSubjectValue = sessionSubject.getValue();
+        	}
+        	throw new NotAuthorized("4541", sessionSubjectValue + " is not allowed to verify identities");
+        }
 
 	    try {
 	        /* get a handle to an Initial DirContext */
