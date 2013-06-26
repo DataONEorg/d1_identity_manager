@@ -66,7 +66,7 @@ public class CNIdentityLDAPImplTest {
 	private String secondarySubject = Settings.getConfiguration().getString("test.secondarySubject");
 	private String groupName = Settings.getConfiguration().getString("test.groupName");
 	private String secondaryGroupName = Settings.getConfiguration().getString("test.secondaryGroupName");
-	private String cnNodeId = "urn:node:testcnid";
+	private String cnAdmin = "cn=test,dc=dataone,dc=org";
 
 
         NodeAccess nodeAccess = new NodeAccess();
@@ -403,7 +403,7 @@ public class CNIdentityLDAPImplTest {
 
 			boolean check = false;
 			Subject cnSubject = new Subject();
-			cnSubject.setValue(cnNodeId);
+			cnSubject.setValue(cnAdmin);
 			check = identityService.verifyAccount(getSession(cnSubject), p);
 			assertTrue(check);
 			check = identityService.checkAttribute(p.getValue(), "isVerified", "TRUE");
