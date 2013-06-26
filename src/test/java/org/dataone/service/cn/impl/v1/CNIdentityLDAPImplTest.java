@@ -642,7 +642,8 @@ public class CNIdentityLDAPImplTest {
 			
 			// try as the CN
 			Subject cnSubject = testCNNode.getSubject(0);
-			check = identityService.mapIdentity(getSession(cnAdmin), p1, p2);
+			cnSubject.setValue(cnAdmin);
+			check = identityService.mapIdentity(getSession(cnSubject), p1, p2);
 			assertTrue(check);
 	
 			// check mapping
