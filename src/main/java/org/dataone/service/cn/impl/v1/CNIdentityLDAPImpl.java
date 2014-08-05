@@ -61,6 +61,13 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 		this.impl = new org.dataone.service.cn.impl.v2.CNIdentityLDAPImpl();
 	}
 	
+	public void setServer(String server) {
+		impl.setServer(server);
+	}
+	
+	public String getServer() {
+        return impl.getServer();
+    }
 	
     public void setBase(String base) {
         impl.setBase(base);
