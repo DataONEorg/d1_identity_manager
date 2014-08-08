@@ -56,6 +56,14 @@ public class ReserveIdentifierService {
 	    impl.setBase(base);
 	}
 	
+	public String getServer() {
+	    return impl.getServer();
+	}
+	
+	public void setServer(String server) {
+	    impl.setServer(server);
+	}
+	
 	public void expireEntries(int numberOfDays) throws NamingException {
 		impl.expireEntries(numberOfDays);
 	}
