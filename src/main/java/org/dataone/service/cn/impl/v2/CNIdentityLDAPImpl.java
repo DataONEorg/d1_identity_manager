@@ -989,8 +989,8 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 									}
 									// catch the NotFound in case we only have the subject's DN
 									try {
-										// do not recurse for equivalent identity requests
-										SubjectInfo equivalentIdentityRequestInfo = this.getSubjectInfo(null, equivalentIdentityRequest, false, originatingSubject);
+										// recurse for equivalent identity requests
+										SubjectInfo equivalentIdentityRequestInfo = this.getSubjectInfo(null, equivalentIdentityRequest, true, originatingSubject);
 										if (equivalentIdentityRequestInfo.getPersonList() != null) {
 											for (Person p: equivalentIdentityRequestInfo.getPersonList()) {
 												if (!contains(pList.getPersonList(), p)) {
@@ -1039,8 +1039,8 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 									}
 									// allow case where the identity is not found
 									try {
-										// do not recurse for equivalent identities
-										SubjectInfo equivalentIdentityInfo = this.getSubjectInfo(null, equivalentIdentity, false, originatingSubject);
+										// recurse for equivalent identities
+										SubjectInfo equivalentIdentityInfo = this.getSubjectInfo(null, equivalentIdentity, true, originatingSubject);
 										if (equivalentIdentityInfo.getPersonList() != null) {
 											for (Person p: equivalentIdentityInfo.getPersonList()) {
 												if (!contains(pList.getPersonList(), p)) {
