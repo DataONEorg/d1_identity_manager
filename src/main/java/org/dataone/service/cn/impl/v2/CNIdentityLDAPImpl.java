@@ -22,7 +22,7 @@
 
 package org.dataone.service.cn.impl.v2;
 
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -660,8 +660,9 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	@Override
 	public SubjectInfo getSubjectInfo(Session session, Subject subject)
     	throws ServiceFailure, NotAuthorized, NotImplemented, NotFound {
-		
-		return getSubjectInfo(session, subject, true, Arrays.asList(subject.getValue()));
+		List<String> visitedSubjects = new ArrayList<String>();
+		visitedSubjects.add(subject.getValue());
+		return getSubjectInfo(session, subject, true, visitedSubjects);
 	}
 	
 	private SubjectInfo getSubjectInfo(Session session, Subject subject, boolean recurse, List<String> visitedSubjects)
@@ -726,13 +727,15 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	        NamingEnumeration<SearchResult> results =
 	            ctx.search(base, searchCriteria, ctls);
 
+	        List<String> visitedSubjects = new ArrayList<String>();
 	        while (results != null && results.hasMore()) {
 	            SearchResult si = results.next();
 	            String dn = si.getNameInNamespace();
 	            log.debug("Search result found for: " + dn);
 	            Attributes attrs = si.getAttributes();
 	            // DO NOT look up other details about matching Groups or Persons, nor include equivalentIdentity requests
-	            SubjectInfo resultList = processAttributes(dn, attrs, false, false, redact, Arrays.asList(dn));
+				visitedSubjects.add(dn);
+	            SubjectInfo resultList = processAttributes(dn, attrs, false, false, redact,visitedSubjects);
                 if (resultList != null) {
                 	// add groups
 	                for (Group group: resultList.getGroupList()) {
@@ -797,8 +800,10 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	            String dn = si.getNameInNamespace();
 	            log.debug("Search result found for: " + dn);
 	            Attributes attrs = si.getAttributes();
-	            // DO NOT look up other details about matching Groups or Persons, nor include equivalentIdentity requests
-	            SubjectInfo resultList = processAttributes(dn, attrs, false, false, redact, Arrays.asList(dn));
+				// DO NOT look up other details about matching Groups or Persons, nor include equivalentIdentity requests
+	            List<String> visitedSubjects = new ArrayList<String>();
+	            visitedSubjects.add(dn);
+	            SubjectInfo resultList = processAttributes(dn, attrs, false, false, redact, visitedSubjects);
                 if (resultList != null) {
                 	// add groups
 	                for (Group group: resultList.getGroupList()) {
@@ -1165,8 +1170,10 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		try {
 			DirContext ctx = getContext();
 			Attributes attributes = ctx.getAttributes(dn);
+			List<String> visitedSubjects = new ArrayList<String>();
+			visitedSubjects.add(dn);
 			// include the equivalent identity requests only
-			subjectInfo = processAttributes(dn, attributes, true, true, redact, Arrays.asList(dn));
+			subjectInfo = processAttributes(dn, attributes, true, true, redact, visitedSubjects);
 			log.debug("Retrieved SubjectList for: " + dn);
 		} catch (Exception e) {
 			String msg = "Problem looking up entry: " + dn + " : " + e.getMessage();
