@@ -896,6 +896,17 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 						group.setGroupName(attributeValue);
 						log.debug("Found attribute: " + attributeName + "=" + attributeValue);
 					}
+					if (attributeName.equalsIgnoreCase("owner")) {
+						items = (NamingEnumeration<String>) attribute.getAll();
+						while (items.hasMore()) {
+							attributeValue = items.next();
+							attributeValue = CertificateManager.getInstance().standardizeDN(attributeValue);
+							log.debug("Found attribute: " + attributeName + "=" + attributeValue);
+							Subject owner = new Subject();
+							owner.setValue(attributeValue);
+							group.addRightsHolder(owner);
+						}
+					}
 					if (attributeName.equalsIgnoreCase("uniqueMember")) {
 						items = (NamingEnumeration<String>) attribute.getAll();
 						while (items.hasMore()) {
