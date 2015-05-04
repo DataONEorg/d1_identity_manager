@@ -412,6 +412,43 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	        	checkAttribute(primarySubject.getValue(), "equivalentIdentityRequest", secondarySubject.getValue());
 	        
 	        if (confirmationRequested) {
+		        throw new InvalidRequest("", "Request already issued for: " + primarySubject.getValue() + " = " + secondarySubject.getValue());
+	        } else {
+	        	ModificationItem[] mods = null;
+		        Attribute mod0 = null;
+	        	// record equivalentIdentityRequest on primary
+		        mods = new ModificationItem[1];
+		        mod0 = new BasicAttribute("equivalentIdentityRequest", secondarySubject.getValue());
+		        mods[0] = new ModificationItem(DirContext.ADD_ATTRIBUTE, mod0);
+		        // make the change
+		        ctx.modifyAttributes(primarySubject.getValue(), mods);
+		        log.debug("Successfully set equivalentIdentityRequest on: " + primarySubject.getValue() + " for " + secondarySubject.getValue());
+	        }
+
+		} catch (Exception e) {
+	    	throw new ServiceFailure("2390", "Could not request map identity: " + e.getMessage());
+	    }
+
+		return true;
+	}
+	
+	//@Override
+	public boolean requestMapIdentityOrig(Session session, Subject secondarySubject)
+			throws ServiceFailure, InvalidToken, NotAuthorized, NotFound,
+			NotImplemented, InvalidRequest {
+
+		try {
+			// primary subject in the session
+			Subject primarySubject = session.getSubject();
+
+	        // get the context
+	        DirContext ctx = getContext();
+
+	        // check if request already exists
+	        boolean confirmationRequested =
+	        	checkAttribute(primarySubject.getValue(), "equivalentIdentityRequest", secondarySubject.getValue());
+	        
+	        if (confirmationRequested) {
 		        throw new InvalidRequest("", "Request already issued for: " + secondarySubject.getValue() + " = " + primarySubject.getValue());
 	        } else {
 	        	ModificationItem[] mods = null;
