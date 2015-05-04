@@ -290,7 +290,7 @@ public class CNIdentityLDAPImplTest {
 
     }
 
-	@Test
+	//@Test
 	public void mapIdentityTwoWay()  throws Exception  {
             NodeRegistryService nodeRegistryService = new NodeRegistryService();
 		try {
