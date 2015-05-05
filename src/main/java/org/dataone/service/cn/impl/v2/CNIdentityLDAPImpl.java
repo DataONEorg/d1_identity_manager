@@ -427,7 +427,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		        // also mark the secondary as having a pending request if we have that identity registered (old way)
 		        boolean subjectExists = false;
 		        try {
-		        	subjectExists = checkAttribute(secondarySubject.getValue(), "cn", secondarySubject.getValue());
+		        	subjectExists = checkAttribute(secondarySubject.getValue(), "dn", secondarySubject.getValue());
 		        } catch (Exception e) {
 		        	subjectExists = false;
 		        }
@@ -437,7 +437,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		        	if (!requestExists) {
 		        		mods = null;
 				        mod0 = null;
-			        	// record equivalentIdentityRequest on primary (new way)
+			        	// record equivalentIdentityRequest on secondary (old way)
 				        mods = new ModificationItem[1];
 				        mod0 = new BasicAttribute("equivalentIdentityRequest", primarySubject.getValue());
 				        mods[0] = new ModificationItem(DirContext.ADD_ATTRIBUTE, mod0);
