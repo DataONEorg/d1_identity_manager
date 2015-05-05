@@ -427,7 +427,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		        // also mark the secondary as having a pending request if we have that identity registered (old way)
 		        boolean subjectExists = false;
 		        try {
-		        	subjectExists = checkAttribute(secondarySubject.getValue(), "dn", secondarySubject.getValue());
+		        	subjectExists = checkAttribute(secondarySubject.getValue(), "cn", "*");
 		        } catch (Exception e) {
 		        	subjectExists = false;
 		        }
