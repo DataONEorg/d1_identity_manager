@@ -408,21 +408,44 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	        DirContext ctx = getContext();
 
 	        // check if request already exists
-	        boolean confirmationRequested =
+	        boolean requestExists =
 	        	checkAttribute(primarySubject.getValue(), "equivalentIdentityRequest", secondarySubject.getValue());
 	        
-	        if (confirmationRequested) {
+	        if (requestExists) {
 		        throw new InvalidRequest("", "Request already issued for: " + primarySubject.getValue() + " = " + secondarySubject.getValue());
 	        } else {
 	        	ModificationItem[] mods = null;
 		        Attribute mod0 = null;
-	        	// record equivalentIdentityRequest on primary
+	        	// record equivalentIdentityRequest on primary (new way)
 		        mods = new ModificationItem[1];
 		        mod0 = new BasicAttribute("equivalentIdentityRequest", secondarySubject.getValue());
 		        mods[0] = new ModificationItem(DirContext.ADD_ATTRIBUTE, mod0);
 		        // make the change
 		        ctx.modifyAttributes(primarySubject.getValue(), mods);
 		        log.debug("Successfully set equivalentIdentityRequest on: " + primarySubject.getValue() + " for " + secondarySubject.getValue());
+		        
+		        // also mark the secondary as having a pending request if we have that identity registered (old way)
+		        boolean subjectExists = false;
+		        try {
+		        	subjectExists = checkAttribute(secondarySubject.getValue(), "cn", secondarySubject.getValue());
+		        } catch (Exception e) {
+		        	subjectExists = false;
+		        }
+		        if (subjectExists) {
+		        	requestExists =
+		    	        	checkAttribute(secondarySubject.getValue(), "equivalentIdentityRequest", primarySubject.getValue());
+		        	if (!requestExists) {
+		        		mods = null;
+				        mod0 = null;
+			        	// record equivalentIdentityRequest on primary (new way)
+				        mods = new ModificationItem[1];
+				        mod0 = new BasicAttribute("equivalentIdentityRequest", primarySubject.getValue());
+				        mods[0] = new ModificationItem(DirContext.ADD_ATTRIBUTE, mod0);
+				        // make the change
+				        ctx.modifyAttributes(secondarySubject.getValue(), mods);
+				        log.debug("Successfully set equivalentIdentityRequest on: " + secondarySubject.getValue() + " for " + primarySubject.getValue());
+		        	}
+		        }
 	        }
 
 		} catch (Exception e) {
@@ -508,6 +531,8 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		        // make the change
 		        ctx.modifyAttributes(secondarySubject.getValue(), mods);
 		        log.debug("Successfully set reciprocal equivalentIdentity: " + secondarySubject.getValue() + " = " + primarySubject.getValue());
+		        
+		        
 		    } else {
 		    	// no request to confirm
 		        throw new InvalidRequest("", "There is no identity mapping request to confim on: " + secondarySubject.getValue() + " for " + primarySubject.getValue());
