@@ -1063,6 +1063,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 									attributeValue = CertificateManager.getInstance().standardizeDN(attributeValue);
 								} catch (Exception e) {
 									// ignore, not a DN
+									continue;
 								}
 								
 								Subject equivalentIdentityRequest = new Subject();
@@ -1113,16 +1114,21 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 							items = (NamingEnumeration<String>) attribute.getAll();
 							while (items.hasMore()) {
 								attributeValue = items.next();
+								log.debug("Found attribute: " + attributeName + "=" + attributeValue);
+								Subject equivalentIdentity = new Subject();
 								try {
 									attributeValue = CertificateManager.getInstance().standardizeDN(attributeValue);
 								} catch (Exception e) {
-									// not a DN, ignore
-									
+									// not a DN, ignore and move on
+									equivalentIdentity.setValue(attributeValue);
+									person.addEquivalentIdentity(equivalentIdentity);
+									continue;
 								}
-								Subject equivalentIdentity = new Subject();
+								
+								// for DNs
 								equivalentIdentity.setValue(attributeValue);
 								person.addEquivalentIdentity(equivalentIdentity);
-								log.debug("Found attribute: " + attributeName + "=" + attributeValue);
+								
 								// add this identity to the subject list
 								if (recurse) {
 									// if we have recurse back to the original identity, then skip it
