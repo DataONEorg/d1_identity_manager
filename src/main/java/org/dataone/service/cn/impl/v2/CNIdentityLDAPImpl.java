@@ -467,23 +467,41 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	        // get the context
 	        DirContext ctx = getContext();
 
-	        // check if request already exists
-	        boolean confirmationRequested =
-	        	checkAttribute(primarySubject.getValue(), "equivalentIdentityRequest", secondarySubject.getValue());
+	        // check if primary is registered
+	        boolean subjectExists = false;
+	        boolean confirmationRequested = false;
+	        try {
+	        	subjectExists = checkAttribute(primarySubject.getValue(), "cn", "*");
+	        } catch (Exception e) {
+	        	subjectExists = false;
+	        }
+	        if (subjectExists) {
+	        	// check if inverse request already exists
+		        confirmationRequested =
+		        	checkAttribute(primarySubject.getValue(), "equivalentIdentityRequest", secondarySubject.getValue());
+		        if (confirmationRequested) {
+			        throw new InvalidRequest("", "Request already issued for: " + primarySubject.getValue() + " = " + secondarySubject.getValue());
+		        }
+	        }
 	        
+	        // check if request already exists
+	        confirmationRequested =
+	        	checkAttribute(secondarySubject.getValue(), "equivalentIdentityRequest", primarySubject.getValue());
 	        if (confirmationRequested) {
 		        throw new InvalidRequest("", "Request already issued for: " + secondarySubject.getValue() + " = " + primarySubject.getValue());
-	        } else {
-	        	ModificationItem[] mods = null;
-		        Attribute mod0 = null;
-	        	// mark secondary as having the equivalentIdentityRequest
-		        mods = new ModificationItem[1];
-		        mod0 = new BasicAttribute("equivalentIdentityRequest", primarySubject.getValue());
-		        mods[0] = new ModificationItem(DirContext.ADD_ATTRIBUTE, mod0);
-		        // make the change
-		        ctx.modifyAttributes(secondarySubject.getValue(), mods);
-		        log.debug("Successfully set equivalentIdentityRequest on: " + secondarySubject.getValue() + " for " + primarySubject.getValue());
 	        }
+	        
+	        // make the request
+        	ModificationItem[] mods = null;
+	        Attribute mod0 = null;
+        	// mark secondary as having the equivalentIdentityRequest
+	        mods = new ModificationItem[1];
+	        mod0 = new BasicAttribute("equivalentIdentityRequest", primarySubject.getValue());
+	        mods[0] = new ModificationItem(DirContext.ADD_ATTRIBUTE, mod0);
+	        // make the change
+	        ctx.modifyAttributes(secondarySubject.getValue(), mods);
+	        log.debug("Successfully set equivalentIdentityRequest on: " + secondarySubject.getValue() + " for " + primarySubject.getValue());
+	        
 
 		} catch (Exception e) {
 	    	throw new ServiceFailure("2390", "Could not request map identity: " + e.getMessage());
@@ -525,13 +543,20 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		        log.debug("Successfully set equivalentIdentity: " + primarySubject.getValue() + " = " + secondarySubject.getValue());
 
 		        // update attribute on secondarySubject
-		        mods = new ModificationItem[1];
-		        mod0 = new BasicAttribute("equivalentIdentity", primarySubject.getValue());
-		        mods[0] = new ModificationItem(DirContext.ADD_ATTRIBUTE, mod0);
-		        // make the change
-		        ctx.modifyAttributes(secondarySubject.getValue(), mods);
-		        log.debug("Successfully set reciprocal equivalentIdentity: " + secondarySubject.getValue() + " = " + primarySubject.getValue());
-		        
+		        boolean subjectExists = false;
+		        try {
+		        	subjectExists = checkAttribute(secondarySubject.getValue(), "cn", "*");
+		        } catch (Exception e) {
+		        	subjectExists = false;
+		        }
+		        if (subjectExists) {
+			        mods = new ModificationItem[1];
+			        mod0 = new BasicAttribute("equivalentIdentity", primarySubject.getValue());
+			        mods[0] = new ModificationItem(DirContext.ADD_ATTRIBUTE, mod0);
+			        // make the change
+			        ctx.modifyAttributes(secondarySubject.getValue(), mods);
+			        log.debug("Successfully set reciprocal equivalentIdentity: " + secondarySubject.getValue() + " = " + primarySubject.getValue());
+		        }
 		        
 		    } else {
 		    	// no request to confirm
