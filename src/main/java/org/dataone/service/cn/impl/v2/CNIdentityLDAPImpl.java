@@ -395,8 +395,8 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		return true;
 	}
     
-	@Override
-	public boolean requestMapIdentity(Session session, Subject secondarySubject)
+	//@Override
+	public boolean requestMapIdentityBRL(Session session, Subject secondarySubject)
 			throws ServiceFailure, InvalidToken, NotAuthorized, NotFound,
 			NotImplemented, InvalidRequest {
 
@@ -455,8 +455,8 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		return true;
 	}
 	
-	//@Override
-	public boolean requestMapIdentityOrig(Session session, Subject secondarySubject)
+	@Override
+	public boolean requestMapIdentity(Session session, Subject secondarySubject)
 			throws ServiceFailure, InvalidToken, NotAuthorized, NotFound,
 			NotImplemented, InvalidRequest {
 
