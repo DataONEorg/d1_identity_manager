@@ -1087,13 +1087,25 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 								try {
 									attributeValue = CertificateManager.getInstance().standardizeDN(attributeValue);
 								} catch (Exception e) {
-									// ignore, not a DN
+									// not a DN - still add this placeholder
+									Subject equivalentIdentityRequest = new Subject();
+									equivalentIdentityRequest.setValue(attributeValue);
+									Person placeholderPerson = new Person();
+									placeholderPerson.setSubject(equivalentIdentityRequest);
+									placeholderPerson.addEmail("NA");
+									placeholderPerson.addGivenName("NA");
+									placeholderPerson.setFamilyName("NA");
+									if (!contains(pList.getPersonList(), placeholderPerson)) {
+										pList.addPerson(placeholderPerson);
+									}
 									continue;
 								}
 								
+								// it is a DN, carry on
 								Subject equivalentIdentityRequest = new Subject();
 								equivalentIdentityRequest.setValue(attributeValue);
 								log.debug("Found attribute: " + attributeName + "=" + attributeValue);
+								
 								// add this identity to the subject list?
 								if (recurse) {
 									// if we have recursed back to the original identity, then skip it
