@@ -708,8 +708,10 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	    	givenNames.add(givenName);
 	    }
 	    Attribute mail = new BasicAttribute("mail");
-	    for (String email: p.getEmailList()) {
-	    	mail.add(email);
+	    if (p.getEmailList() != null) {
+		    for (String email: p.getEmailList()) {
+		    	mail.add(email);
+		    }
 	    }
 	    Attribute isVerified = new BasicAttribute("isVerified", Boolean.FALSE.toString().toUpperCase());
 
