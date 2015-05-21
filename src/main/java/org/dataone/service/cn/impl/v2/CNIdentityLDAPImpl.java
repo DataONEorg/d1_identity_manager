@@ -850,7 +850,9 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 
 		// check redaction policy
 		boolean redact = shouldRedact(session);
-		
+		if (start < 0) {
+		    start = 0;
+		}
 		SubjectInfo pList = new SubjectInfo();
 		try {
 			DirContext ctx = getContext();
@@ -883,7 +885,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 
 	        NamingEnumeration<SearchResult> results =
 	            ctx.search(base, searchCriteria, ctls);
-
+	        int index =0;
 	        while (results != null && results.hasMore()) {
 	            SearchResult si = results.next();
 	            String dn = si.getNameInNamespace();
@@ -897,13 +899,20 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
                 	// add groups
 	                for (Group group: resultList.getGroupList()) {
 	                	if (!contains(pList.getGroupList(), group)) {
-	                		pList.addGroup(group);
+	                	    if(index >= start && index <= count) {
+	                	        pList.addGroup(group);
+	                	        index++;
+	                	    }
+	                		
 	                	}
 	                }
 	                // add people
 	                for (Person person: resultList.getPersonList()) {
 	                	if (!contains(pList.getPersonList(), person)) {
-	                		pList.addPerson(person);
+	                		if(index >= start && index <= count) {
+	                		    pList.addPerson(person);
+	                		    index++;
+                            }
 	                	}
 	                }
                 }
