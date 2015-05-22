@@ -850,8 +850,11 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 
 		// check redaction policy
 		boolean redact = shouldRedact(session);
-		if (start < 0) {
+		if (start == null || start < 0) {
 		    start = 0;
+		}
+		if (count == null) {
+		    count = Integer.MAX_VALUE;
 		}
 		SubjectInfo pList = new SubjectInfo();
 		try {
@@ -899,7 +902,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
                 	// add groups
 	                for (Group group: resultList.getGroupList()) {
 	                	if (!contains(pList.getGroupList(), group)) {
-	                	    if(index >= start && index <= count) {
+	                	    if(index >= start && index < count) {
 	                	        pList.addGroup(group);
 	                	        index++;
 	                	    }
@@ -909,7 +912,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	                // add people
 	                for (Person person: resultList.getPersonList()) {
 	                	if (!contains(pList.getPersonList(), person)) {
-	                		if(index >= start && index <= count) {
+	                		if(index >= start && index < count) {
 	                		    pList.addPerson(person);
 	                		    index++;
                             }
