@@ -759,13 +759,13 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		if (start == null || start < 0) {
             start = 0;
         }
-        if (count == null) {
-            log.warn("The count is null===================");
+        if (count == null || count <= 0) {
+            log.info("The count is null or equal or less than 0===================");
             count = Integer.MAX_VALUE;
-            log.warn("the count value is ==============="+count.intValue());
+            log.info("the count value is ==============="+count.intValue());
         } else {
-            log.warn("The count is not null===================");
-            log.warn("the count value is ==============="+count.intValue());
+            log.info("The count is not null or a positive number===================");
+            log.info("the count value is ==============="+count.intValue());
         }
 		SubjectInfo pList = new SubjectInfo();
 		try {
