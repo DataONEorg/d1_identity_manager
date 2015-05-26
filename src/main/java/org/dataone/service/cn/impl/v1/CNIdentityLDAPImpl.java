@@ -801,7 +801,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 
 	        NamingEnumeration<SearchResult> results =
 	            ctx.search(base, searchCriteria, ctls);
-	        int index =0;
+	        int index = start;
 	        while (results != null && results.hasMore()) {
 	            SearchResult si = results.next();
 	            String dn = si.getNameInNamespace();
@@ -822,7 +822,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	                // add people
 	                for (Person person: resultList.getPersonList()) {
 	                	if (!contains(pList.getPersonList(), person)) {
-	                	    log.info("the index is "+index);
+	                	    log.debug("the index is "+index);
 	                	    if(index >= start && index < (count+start)) {
                                 pList.addPerson(person);
                                 index++;
