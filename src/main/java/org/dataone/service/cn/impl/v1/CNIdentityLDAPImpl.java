@@ -85,6 +85,7 @@ import org.dataone.service.types.v1.util.ServiceMethodRestrictionUtil;
 public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 
 	public static Log log = LogFactory.getLog(CNIdentityLDAPImpl.class);
+	private static Integer DEFULAT_COUNT = new Integer(100);
 
         private NodeRegistryService nodeRegistryService = new NodeRegistryService();
 	public CNIdentityLDAPImpl() {
@@ -759,9 +760,10 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		if (start == null || start < 0) {
             start = 0;
         }
+		log.info("The start index is "+start.intValue());
         if (count == null || count <= 0) {
             log.info("The count is null or equal or less than 0===================");
-            count = Integer.MAX_VALUE;
+            count = DEFULAT_COUNT;
             log.info("the count value is ==============="+count.intValue());
         } else {
             log.info("The count is not null or a positive number===================");
@@ -811,7 +813,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
                 	// add groups
 	                for (Group group: resultList.getGroupList()) {
 	                	if (!contains(pList.getGroupList(), group)) {
-	                	    if(index >= start && index < count) {
+	                	    if(index >= start && index < (count+start)) {
                                 pList.addGroup(group);
                                 index++;
                             }
@@ -820,7 +822,8 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	                // add people
 	                for (Person person: resultList.getPersonList()) {
 	                	if (!contains(pList.getPersonList(), person)) {
-	                	    if(index >= start && index < count) {
+	                	    log.info("the index is "+index);
+	                	    if(index >= start && index < (count+start)) {
                                 pList.addPerson(person);
                                 index++;
                             }
