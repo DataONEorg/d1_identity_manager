@@ -86,6 +86,7 @@ import org.dataone.service.types.v2.util.ServiceMethodRestrictionUtil;
 public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 
 	public static Log log = LogFactory.getLog(CNIdentityLDAPImpl.class);
+	private static final Integer DEFULAT_COUNT = new Integer(100);
 
         private NodeRegistryService nodeRegistryService = new NodeRegistryService();
 	public CNIdentityLDAPImpl() {
@@ -851,11 +852,17 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		// check redaction policy
 		boolean redact = shouldRedact(session);
 		if (start == null || start < 0) {
-		    start = 0;
-		}
-		if (count == null) {
-		    count = Integer.MAX_VALUE;
-		}
+            start = 0;
+        }
+        log.info("The start index is "+start.intValue());
+        if (count == null || count <= 0) {
+            log.info("The count is null or equal or less than 0===================");
+            count = DEFULAT_COUNT;
+            log.info("the count value is ==============="+count.intValue());
+        } else {
+            log.info("The count is not null or a positive number===================");
+            log.info("the count value is ==============="+count.intValue());
+        }
 		SubjectInfo pList = new SubjectInfo();
 		try {
 			DirContext ctx = getContext();
@@ -902,20 +909,20 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
                 	// add groups
 	                for (Group group: resultList.getGroupList()) {
 	                	if (!contains(pList.getGroupList(), group)) {
-	                	    if(index >= start && index < count) {
-	                	        pList.addGroup(group);
-	                	        index++;
-	                	    }
+	                	    if(index >= start && index < (count+start)) {
+                                pList.addGroup(group);
+                            }
+                            index++;
 	                		
 	                	}
 	                }
 	                // add people
 	                for (Person person: resultList.getPersonList()) {
 	                	if (!contains(pList.getPersonList(), person)) {
-	                		if(index >= start && index < count) {
-	                		    pList.addPerson(person);
-	                		    index++;
+	                	    if(index >= start && index < (count+start)) {
+                                pList.addPerson(person);
                             }
+                            index++;
 	                	}
 	                }
                 }
