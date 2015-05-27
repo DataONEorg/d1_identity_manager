@@ -801,7 +801,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 
 	        NamingEnumeration<SearchResult> results =
 	            ctx.search(base, searchCriteria, ctls);
-	        int index = start;
+	        int index = 0;
 	        while (results != null && results.hasMore()) {
 	            SearchResult si = results.next();
 	            String dn = si.getNameInNamespace();
@@ -815,8 +815,8 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	                	if (!contains(pList.getGroupList(), group)) {
 	                	    if(index >= start && index < (count+start)) {
                                 pList.addGroup(group);
-                                index++;
                             }
+	                	    index++;
 	                	}
 	                }
 	                // add people
@@ -825,8 +825,8 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	                	    log.debug("the index is "+index);
 	                	    if(index >= start && index < (count+start)) {
                                 pList.addPerson(person);
-                                index++;
                             }
+	                	    index++;
 	                	}
 	                }
                 }
