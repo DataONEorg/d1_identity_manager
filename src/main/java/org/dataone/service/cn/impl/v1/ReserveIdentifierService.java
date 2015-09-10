@@ -26,8 +26,10 @@ import javax.naming.NamingException;
 
 import org.dataone.service.exceptions.IdentifierNotUnique;
 import org.dataone.service.exceptions.InvalidRequest;
+import org.dataone.service.exceptions.InvalidToken;
 import org.dataone.service.exceptions.NotAuthorized;
 import org.dataone.service.exceptions.NotFound;
+import org.dataone.service.exceptions.NotImplemented;
 import org.dataone.service.exceptions.ServiceFailure;
 import org.dataone.service.types.v1.Identifier;
 import org.dataone.service.types.v1.Session;
@@ -126,12 +128,14 @@ public class ReserveIdentifierService {
 	 * @throws NotFound
 	 * @throws IdentifierNotUnique 
 	 */
-	public boolean removeReservation(Session session, Identifier pid) throws NotAuthorized, NotFound, IdentifierNotUnique {
+	public boolean removeReservation(Session session, Identifier pid) throws InvalidToken, ServiceFailure,  NotFound,
+    NotAuthorized, NotImplemented, InvalidRequest, IdentifierNotUnique {
 
 		return impl.removeReservation(session, pid);
 	}
 
-	public boolean hasReservation(Session session, Subject subject, Identifier pid) throws NotAuthorized, NotFound, IdentifierNotUnique {
+	public boolean hasReservation(Session session, Subject subject, Identifier pid) throws InvalidToken, ServiceFailure,  NotFound,
+    NotAuthorized, NotImplemented, InvalidRequest, IdentifierNotUnique {
 		return impl.hasReservation(session, subject, pid);
 	}
 
