@@ -234,8 +234,8 @@ public class ReserveIdentifierService extends LDAPService {
 		return false;
 	}
 
-	public boolean hasReservation(Session session, Subject subject, Identifier pid) throws InvalidToken, ServiceFailure,  NotFound,
-    NotAuthorized, NotImplemented, InvalidRequest, IdentifierNotUnique {
+	public boolean hasReservation(Session session, Subject subject, Identifier pid) throws NotFound,
+    NotAuthorized, InvalidRequest, IdentifierNotUnique {
 		if (subject == null) {
 			throw new InvalidRequest("4926", "subject parameter cannot be null");
 		}
