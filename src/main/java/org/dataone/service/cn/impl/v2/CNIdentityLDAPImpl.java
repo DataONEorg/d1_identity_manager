@@ -640,8 +640,12 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
                 nodeList = D1Client.getCN().listNodes().getNodeList();
         }
         
-        Subject sessionSubject = session.getSubject();
-        boolean isAllowed = ServiceMethodRestrictionUtil.isMethodAllowed(sessionSubject, nodeList, "CNIdentity", "verifyAccount");
+        boolean isAllowed = false;
+        Subject sessionSubject = null;
+        if (session != null) {
+	        sessionSubject = session.getSubject();
+	        isAllowed = ServiceMethodRestrictionUtil.isMethodAllowed(sessionSubject, nodeList, "CNIdentity", "verifyAccount");
+        }
         if (!isAllowed) {
         	String sessionSubjectValue = null;
         	if (sessionSubject != null) {
