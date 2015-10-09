@@ -135,7 +135,7 @@ public class ReserveIdentifierService {
 	}
 
 	public boolean hasReservation(Session session, Subject subject, Identifier pid) throws InvalidToken, ServiceFailure,  NotFound,
-    NotAuthorized, NotImplemented, InvalidRequest, IdentifierNotUnique {
+    NotAuthorized, NotImplemented, InvalidRequest {
 		return impl.hasReservation(session, subject, pid);
 	}
 
