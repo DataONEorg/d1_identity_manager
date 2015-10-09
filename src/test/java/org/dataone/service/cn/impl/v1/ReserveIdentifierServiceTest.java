@@ -179,7 +179,7 @@ public class ReserveIdentifierServiceTest {
 			Identifier sid = null;
 			
 			// find a SID if we can
-			InputStream is = D1Client.getCN().query(null, "solr", "q=seriesId:*");
+			InputStream is = D1Client.getCN().query(null, "solr", "?q=seriesId:*");
 			Document document = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(is);
 			NodeList nodeList = (NodeList) XPathFactory.newInstance().newXPath().evaluate("/response/result/doc/str[name='seriesId']", document, XPathConstants.NODESET);
 			if (nodeList != null && nodeList.getLength() > 0) {
