@@ -45,9 +45,11 @@ import javax.naming.directory.SearchResult;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.dataone.client.v2.itk.D1Client;
 import org.dataone.cn.hazelcast.HazelcastClientInstance;
 import org.dataone.cn.ldap.LDAPService;
 import org.dataone.configuration.Settings;
+import org.dataone.service.exceptions.BaseException;
 import org.dataone.service.exceptions.IdentifierNotUnique;
 import org.dataone.service.exceptions.InvalidRequest;
 import org.dataone.service.exceptions.InvalidToken;
@@ -121,6 +123,16 @@ public class ReserveIdentifierService extends LDAPService {
 		Object sysMeta = HazelcastClientInstance.getHazelcastClient().getMap(mapName).get(pid);
 		if (sysMeta != null) {
 			throw new IdentifierNotUnique("4210", "The given pid is already in use: " + pid.getValue());
+		}
+		
+		// check for sid
+		try {
+			sysMeta = D1Client.getCN().getSystemMetadata(null, pid);
+		} catch (BaseException e) {
+			log.warn("Exception looking up SID (likely does not exist): " + pid.getValue(), e);
+		}
+		if (sysMeta != null) {
+			throw new IdentifierNotUnique("4210", "The given sid is already in use: " + pid.getValue());
 		}
 
 		// look up the identifier before attempting to add it
