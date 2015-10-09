@@ -128,8 +128,13 @@ public class ReserveIdentifierService extends LDAPService {
 		// check for sid
 		try {
 			sysMeta = D1Client.getCN().getSystemMetadata(null, pid);
+		} catch (NotFound e) {
+			// this is usually expected
+			log.debug("Object does not exist on CN, can reserve identifier");
+		} catch (NotAuthorized e) {
+			log.error("Not authorized to look up SID (we should be since acting as CN): " + pid.getValue(), e);
 		} catch (BaseException e) {
-			log.warn("Exception looking up SID (likely does not exist): " + pid.getValue(), e);
+			log.warn("Exception looking up SID (may or may not be an issue): " + pid.getValue(), e);
 		}
 		if (sysMeta != null) {
 			throw new IdentifierNotUnique("4210", "The given sid is already in use: " + pid.getValue());
