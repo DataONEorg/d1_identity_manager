@@ -28,20 +28,29 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.InputStream;
 import java.util.Set;
 
 import javax.naming.NamingException;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathFactory;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.dataone.client.v2.itk.D1Client;
 import org.dataone.configuration.Settings;
+import org.dataone.service.exceptions.IdentifierNotUnique;
 import org.dataone.service.exceptions.NotAuthorized;
 import org.dataone.service.types.v1.Identifier;
+import org.dataone.service.types.v1.ObjectList;
 import org.dataone.service.types.v1.Session;
 import org.dataone.service.types.v1.Subject;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.w3c.dom.Document;
+import org.w3c.dom.NodeList;
 
 import com.hazelcast.config.ClasspathXmlConfig;
 import com.hazelcast.core.Hazelcast;
@@ -143,6 +152,61 @@ public class ReserveIdentifierServiceTest {
 			// now clean up
 			check = service.removeReservation(getSession(subject),  pid);
 			assertTrue(check);
+
+		} catch (Exception e) {
+			e.printStackTrace();
+			fail();
+		}
+
+	}
+	
+	@Test
+	public void reserveIdentifier_exists()  {
+
+		try {
+
+			ReserveIdentifierService service = new ReserveIdentifierService();
+
+			// subject
+			Subject subject = new Subject();
+			subject.setValue(primarySubject);
+
+			// another subject
+			Subject anotherSubject = new Subject();
+			anotherSubject.setValue(secondarySubject);
+
+			// find existing identifier
+			Identifier sid = null;
+			
+			// find a SID if we can
+			InputStream is = D1Client.getCN().query(null, "solr", "q=seriesId:*");
+			Document document = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(is);
+			NodeList nodeList = (NodeList) XPathFactory.newInstance().newXPath().evaluate("/response/result/doc/str[name='seriesId']", document, XPathConstants.NODESET);
+			if (nodeList != null && nodeList.getLength() > 0) {
+				String seriesId = nodeList.item(0).getTextContent();
+				sid = new Identifier();
+				sid.setValue(seriesId);
+			}
+			
+			if (sid == null) {
+				// fallback to pid-based test, not as thorough
+				log.warn("Could not find suitable SID for testing, looking up PID");
+				ObjectList ol = D1Client.getCN().listObjects(null, null, null, null, null, null, 0, 10);
+				if (ol != null && ol.sizeObjectInfoList() > 0) {
+					sid = ol.getObjectInfo(0).getIdentifier();
+				}
+			}	
+			assertNotNull(sid);
+			
+			Identifier retPid = null;
+			//service.setServer(server);
+			try {
+				retPid = service.reserveIdentifier(getSession(subject), sid);
+			} catch (IdentifierNotUnique inu) {
+				// this is expected
+				return;
+			}
+			fail("exception should be thrown and reservation should not be accepted for existing id: " + sid.getValue());
 
 		} catch (Exception e) {
 			e.printStackTrace();
