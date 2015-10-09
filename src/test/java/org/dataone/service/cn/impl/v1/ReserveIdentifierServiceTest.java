@@ -179,17 +179,17 @@ public class ReserveIdentifierServiceTest {
 			Identifier sid = null;
 			
 			// find a SID if we can
-			InputStream is = D1Client.getCN().query(null, "solr", "?q=seriesId:*");
+			InputStream is = D1Client.getCN().query(null, "solr", "?q=seriesId:*&fl=seriesId");
 			Document document = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(is);
-			NodeList nodeList = (NodeList) XPathFactory.newInstance().newXPath().evaluate("/response/result/doc/str[name='seriesId']", document, XPathConstants.NODESET);
-			if (nodeList != null && nodeList.getLength() > 0) {
-				String seriesId = nodeList.item(0).getTextContent();
+			String seriesId = XPathFactory.newInstance().newXPath().evaluate("/response/result/doc[0]/str[name='seriesId']", document);
+			if (seriesId != null) {
 				sid = new Identifier();
 				sid.setValue(seriesId);
 			}
 			
 			if (sid == null) {
 				// fallback to pid-based test, not as thorough
+				fail("NEED SID FOR THIS TEST");
 				log.warn("Could not find suitable SID for testing, looking up PID");
 				ObjectList ol = D1Client.getCN().listObjects(null, null, null, null, null, null, 0, 10);
 				if (ol != null && ol.sizeObjectInfoList() > 0) {
