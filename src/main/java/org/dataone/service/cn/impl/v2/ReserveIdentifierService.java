@@ -59,6 +59,7 @@ import org.dataone.service.exceptions.NotImplemented;
 import org.dataone.service.exceptions.ServiceFailure;
 import org.dataone.service.types.v1.Group;
 import org.dataone.service.types.v1.Identifier;
+import org.dataone.service.types.v1.ObjectList;
 import org.dataone.service.types.v1.Person;
 import org.dataone.service.types.v1.Session;
 import org.dataone.service.types.v1.Subject;
@@ -125,7 +126,20 @@ public class ReserveIdentifierService extends LDAPService {
 			throw new IdentifierNotUnique("4210", "The given pid is already in use: " + pid.getValue());
 		}
 		
-		// check for sid
+		// check for sid using list objects -- not subject to access control rules
+		ObjectList objects = null;
+		try {
+			objects = D1Client.getCN().listObjects(null, null, null, null, null, pid, null, null);
+		}
+		catch (BaseException e) {
+			log.warn("Exception looking up SID (may or may not be an issue): " + pid.getValue(), e);
+		}
+		if (objects != null && objects.getTotal() > 0) {
+			throw new IdentifierNotUnique("4210", "The given identifier is already in use: " + pid.getValue());
+		}
+		
+		// using sys meta
+		/*
 		try {
 			sysMeta = D1Client.getCN().getSystemMetadata(null, pid);
 		} catch (NotFound e) {
@@ -139,6 +153,7 @@ public class ReserveIdentifierService extends LDAPService {
 		if (sysMeta != null) {
 			throw new IdentifierNotUnique("4210", "The given sid is already in use: " + pid.getValue());
 		}
+		*/
 
 		// look up the identifier before attempting to add it
 		String dn = lookupDN(pid);
