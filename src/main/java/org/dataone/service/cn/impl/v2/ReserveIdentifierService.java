@@ -46,7 +46,7 @@ import javax.naming.directory.SearchResult;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.dataone.client.v2.itk.D1Client;
-import org.dataone.cn.hazelcast.HazelcastClientInstance;
+import org.dataone.cn.hazelcast.HazelcastClientFactory;
 import org.dataone.cn.ldap.LDAPService;
 import org.dataone.configuration.Settings;
 import org.dataone.service.exceptions.BaseException;
@@ -120,8 +120,7 @@ public class ReserveIdentifierService extends LDAPService {
 		boolean ownedBySubject = false;
 		
 		// check hz for existing system metadata on this pid
-		String mapName = Settings.getConfiguration().getString("dataone.hazelcast.systemMetadata");
-		Object sysMeta = HazelcastClientInstance.getHazelcastClient().getMap(mapName).get(pid);
+		Object sysMeta = HazelcastClientFactory.getSystemMetadataMap().get(pid);
 		if (sysMeta != null) {
 			throw new IdentifierNotUnique("4210", "The given pid is already in use: " + pid.getValue());
 		}
