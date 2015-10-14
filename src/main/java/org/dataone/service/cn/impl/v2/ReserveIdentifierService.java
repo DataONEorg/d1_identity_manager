@@ -265,6 +265,18 @@ public class ReserveIdentifierService extends LDAPService {
 		return false;
 	}
 
+	/**
+     * determines whether or not the subject or one of its equivalent identities 
+     * has a reservation on the identifier.
+     * 
+     * @param session
+     * @param subject
+     * @param id  - a pid or sid 
+     * @return - true  (does not return false)
+     * @throws NotFound  - if a reservation is not found at all for that pid
+     * @throws NotAuthorized  - if a reservation exists on the pid that is not owned by the subject.
+     * @throws InvalidRequest - if subject or pid is null
+     */
 	public boolean hasReservation(Session session, Subject subject, Identifier pid) throws NotFound,
     NotAuthorized, InvalidRequest {
 		if (subject == null) {
