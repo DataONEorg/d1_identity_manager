@@ -96,7 +96,7 @@ public class ReserveIdentifierService {
 	 * @throws IdentifierNotUnique
 	 * @throws NotAuthorized 
 	 */
-	public Identifier reserveIdentifier(Session session, Identifier pid) throws IdentifierNotUnique, NotAuthorized {
+	public Identifier reserveIdentifier(Session session, Identifier pid) throws IdentifierNotUnique, NotAuthorized, ServiceFailure {
 
 		return impl.reserveIdentifier(session, pid);
 	}

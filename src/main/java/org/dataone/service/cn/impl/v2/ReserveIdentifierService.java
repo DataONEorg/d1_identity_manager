@@ -110,10 +110,17 @@ public class ReserveIdentifierService extends LDAPService {
 	 * @throws IdentifierNotUnique
 	 * @throws NotAuthorized 
 	 */
-	public Identifier reserveIdentifier(Session session, Identifier pid) throws IdentifierNotUnique, NotAuthorized {
+	public Identifier reserveIdentifier(Session session, Identifier pid) throws IdentifierNotUnique, NotAuthorized, ServiceFailure {
 
 		if (session == null) {
 			throw new NotAuthorized("4180", "Session is required to reserve identifiers");
+		}
+		
+		// expire entries
+		try {
+			this.expireEntries(1);
+		} catch (NamingException ne) {
+			throw new ServiceFailure("4921", "Could not remove expired entries before checking reservation status");
 		}
 		
 		Subject subject = session.getSubject();
@@ -278,7 +285,7 @@ public class ReserveIdentifierService extends LDAPService {
      * @throws InvalidRequest - if subject or pid is null
      */
 	public boolean hasReservation(Session session, Subject subject, Identifier pid) throws NotFound,
-    NotAuthorized, InvalidRequest {
+    NotAuthorized, InvalidRequest, ServiceFailure {
 		if (subject == null) {
 			throw new InvalidRequest("4926", "subject parameter cannot be null");
 		}
@@ -286,6 +293,13 @@ public class ReserveIdentifierService extends LDAPService {
 			throw new InvalidRequest("4926", "pid parameter cannot be null");
 		}
 		log.debug("hasReservation for Subject:" + subject.getValue() + " with pid: " + pid.getValue());
+		
+		// expire entries
+		try {
+			this.expireEntries(1);
+		} catch (NamingException ne) {
+			throw new ServiceFailure("4921", "Could not remove expired entries before checking reservation status");
+		}
 		
 		// look up the SubjectInfo
 		SubjectInfo subjectInfo = null;
