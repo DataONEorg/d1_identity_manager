@@ -285,16 +285,20 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
         
         // do any of our subjects match the subject being edited?
         for (Subject user: sessionSubjects) {
-	        String sessionDN = user.getValue();
+	        String sessionSubject = user.getValue();
         	try {
-    	        sessionDN = CertificateManager.getInstance().standardizeDN(sessionDN);
+    	        sessionSubject = CertificateManager.getInstance().standardizeDN(sessionSubject);
         	} catch (IllegalArgumentException iae) {
         		// ignore, "public", "verified" etc...
         	}
-        	String listedDN = personSubject.getValue();
-        	listedDN = CertificateManager.getInstance().standardizeDN(listedDN);
+        	String listedSubject = personSubject.getValue();
+        	try {
+            	listedSubject = CertificateManager.getInstance().standardizeDN(listedSubject);
+        	} catch (IllegalArgumentException iae) {
+        		// ignore for non-DN subjects
+        	}
 
-        	if (sessionDN.equals(listedDN)) {
+        	if (sessionSubject.equals(listedSubject)) {
         		canEdit = true;
         		break;
         	}
@@ -700,9 +704,9 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		try {
 			ldapName = new LdapName(subject);
 		} catch (InvalidNameException e) {
-			log.warn("Subject not a valid DN: " + subject, e);
+			log.warn("Subject not a valid DN: " + subject);
 			dn = "uid=" + subject + "," + subtree + "," + this.getBase(); 
-			log.info("Created DN from subject: " + dn, e);
+			log.info("Created DN from subject: " + dn);
 		}
 		
 		return dn;
@@ -731,7 +735,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 			constructTree(dn);
 		} catch (NamingException e) {
 			e.printStackTrace();
-	    	throw new ServiceFailure("4520", "Could not counstruct partial tree: " + e.getMessage());
+	    	throw new ServiceFailure("4520", "Could not construct partial tree: " + e.getMessage());
 		}
 
 	    // either it's in the dn, or we should construct it
