@@ -384,6 +384,100 @@ public class CNIdentityLDAPImplTest {
 		}
 
 	}
+	
+	@Test
+	public void mapIdentityTwoWayOrcid()  throws Exception  {
+		NodeRegistryService nodeRegistryService = new NodeRegistryService();
+		try {
+                    
+			ByteArrayOutputStream cnNodeOutput = new ByteArrayOutputStream();
+			InputStream is = this.getClass().getResourceAsStream("/org/dataone/resources/samples/v2/cnNode.xml");
+			
+			BufferedInputStream bInputStream = new BufferedInputStream(is);
+			byte[] barray = new byte[SIZE];
+			int nRead = 0;
+			while ((nRead = bInputStream.read(barray, 0, SIZE)) != -1) {
+			    cnNodeOutput.write(barray, 0, nRead);
+			}
+			bInputStream.close();
+			ByteArrayInputStream bArrayInputStream = new ByteArrayInputStream(cnNodeOutput.toByteArray());
+			Node testCNNode = TypeMarshaller.unmarshalTypeFromStream(Node.class, bArrayInputStream);
+			
+			NodeReference cnNodeReference = testCNNode.getIdentifier();
+			try {
+				nodeRegistryService.getNode(testCNNode.getIdentifier());
+			} catch (NotFound nf) {
+				cnNodeReference = nodeRegistryService.register(testCNNode);
+			}
+			
+			assertNotNull(cnNodeReference);
+			testCNNode.setIdentifier(cnNodeReference);
+			nodeAccess.setNodeApproved(cnNodeReference, Boolean.TRUE);
+
+			Subject p1 = new Subject();
+			p1.setValue(primarySubject);
+			Person person1 = new Person();
+			person1.setSubject(p1);
+			person1.setFamilyName("test1");
+			person1.addGivenName("test1");
+			person1.addEmail("test1@dataone.org");
+
+			Subject p2 = new Subject();
+			p2.setValue(orcidSubject);
+			Person person2 = new Person();
+			person2.setSubject(p2);
+			person2.setFamilyName("test2");
+			person2.addGivenName("test2");
+			person2.addEmail("test2@dataone.org");
+			
+
+			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
+			
+			String dn1 = identityService.constructDn(primarySubject);
+			String dn2 = identityService.constructDn(orcidSubject);
+
+			boolean check = false;
+
+			// create subjects
+			Subject subject = identityService.registerAccount(getSession(p1), person1);
+			assertNotNull(subject);
+			subject = identityService.registerAccount(getSession(p2), person2);
+			assertNotNull(subject);
+
+			// map p1 to p2
+			check = identityService.requestMapIdentity(getSession(p1), p2);
+			assertTrue(check);
+			// check pending
+			check = identityService.checkAttribute(dn2, "equivalentIdentityRequest", p1.getValue());
+			assertTrue(check);
+			// not yet confirmed on either end
+			check = identityService.checkAttribute(dn1, "equivalentIdentity", p2.getValue());
+			assertFalse(check);
+			check = identityService.checkAttribute(dn2, "equivalentIdentity", p1.getValue());
+			assertFalse(check);
+			// accept request
+			check = identityService.confirmMapIdentity(getSession(p2), p1);
+			assertTrue(check);
+
+			// double check reciprocal mapping
+			check = identityService.checkAttribute(dn1, "equivalentIdentity", p2.getValue());
+			assertTrue(check);
+			check = identityService.checkAttribute(dn2, "equivalentIdentity", p1.getValue());
+			assertTrue(check);
+
+			// clean up (this is not required for service to be functioning)
+			check = identityService.removeEntry(dn1);
+			assertTrue(check);
+			check = identityService.removeEntry(dn2);
+			assertTrue(check);
+                        nodeRegistryService.deleteNode(cnNodeReference);
+                        
+		} catch (Exception e) {
+			e.printStackTrace();
+			fail();
+		}
+
+	}
 
 	@Test
 	public void verifySubject()  {
