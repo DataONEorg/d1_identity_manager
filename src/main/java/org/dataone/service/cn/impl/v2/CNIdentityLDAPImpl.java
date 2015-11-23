@@ -351,6 +351,14 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
         String dn = constructDn(primarySubject.getValue());
         String dn2 = constructDn(secondarySubject.getValue());
         
+        // for handling special characters in the DN
+        try {
+			dn = new LdapName(dn).toString();
+	        dn2 = new LdapName(dn2).toString();
+		} catch (InvalidNameException e) {
+	    	throw new ServiceFailure("2390", "Could properly escape DN: " + e.getMessage());
+		}
+        
         // check for pre-existing mapping
         boolean mappingExists =
 	    	checkAttribute(dn, "equivalentIdentity", secondarySubject.getValue());
