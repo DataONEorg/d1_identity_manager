@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import javax.naming.InvalidNameException;
 import javax.naming.NameAlreadyBoundException;
 import javax.naming.NameNotFoundException;
 import javax.naming.NamingEnumeration;
@@ -86,17 +87,22 @@ import org.dataone.service.types.v2.util.ServiceMethodRestrictionUtil;
 public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 
 	public static Log log = LogFactory.getLog(CNIdentityLDAPImpl.class);
-	private static final Integer DEFULAT_COUNT = new Integer(100);
+	
+	private static final Integer DEFAULT_COUNT = new Integer(100);
 
-        private NodeRegistryService nodeRegistryService = new NodeRegistryService();
+	private String subtree = Settings.getConfiguration().getString("identity.ldap.subtree", "dc=dataone");
+
+    private NodeRegistryService nodeRegistryService = new NodeRegistryService();
+    
 	public CNIdentityLDAPImpl() {
 		// we need to use a different base for the ids
 		this.setBase(Settings.getConfiguration().getString("identity.ldap.base"));
 	}
-        @Override
-        public void setBase(String base) {
-            this.base = base;
-        }
+	
+    @Override
+    public void setBase(String base) {
+        this.base = base;
+    }
         
     @Override    
 	public Subject createGroup(Session session, Group group) throws ServiceFailure,
@@ -352,34 +358,37 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	        ModificationItem[] mods = null;
 	        Attribute mod0 = null;
 	        
-	        String primaryDN = new LdapName(primarySubject.getValue()).toString();
-	        String secondaryDN = new LdapName(secondarySubject.getValue()).toString();
+	        String primaryId = new LdapName(primarySubject.getValue()).toString();
+	        String secondaryId = new LdapName(secondarySubject.getValue()).toString();
 
+	        String dn = constructDn(primarySubject.getValue());
+	        String dn2 = constructDn(secondarySubject.getValue());
+	        
 	        // mark primary as having the equivalentIdentity
 	        try {
 		        mods = new ModificationItem[1];
-		        mod0 = new BasicAttribute("equivalentIdentity", secondaryDN);
+		        mod0 = new BasicAttribute("equivalentIdentity", secondaryId);
 		        mods[0] = new ModificationItem(DirContext.ADD_ATTRIBUTE, mod0);
 		        // make the change
-		        ctx.modifyAttributes(primaryDN, mods);
-		        log.debug("Successfully set equivalentIdentity on: " + primaryDN + " for " + secondaryDN);
+		        ctx.modifyAttributes(dn, mods);
+		        log.debug("Successfully set equivalentIdentity on: " + primaryId + " for " + secondaryId);
 	        } catch (Exception e) {
 				// one failure is OK, two is not
-		        log.warn("Could not set equivalentIdentity on: " + primaryDN + " for " + secondaryDN, e);
+		        log.warn("Could not set equivalentIdentity on: " + primaryId + " for " + secondaryId, e);
 		        failureCount++;
 			}
 	        
         	// mark secondary as having the equivalentIdentity
 	        try {
 		        mods = new ModificationItem[1];
-		        mod0 = new BasicAttribute("equivalentIdentity", primaryDN);
+		        mod0 = new BasicAttribute("equivalentIdentity", primaryId);
 		        mods[0] = new ModificationItem(DirContext.ADD_ATTRIBUTE, mod0);
 		        // make the change
-		        ctx.modifyAttributes(secondaryDN, mods);
-		        log.debug("Successfully set equivalentIdentity on: " + secondaryDN + " for " + primaryDN);
+		        ctx.modifyAttributes(dn2, mods);
+		        log.debug("Successfully set equivalentIdentity on: " + secondaryId + " for " + primaryId);
 	        } catch (Exception e) {
 				// one failure is OK, two is not
-		        log.warn("Could not set equivalentIdentity on: " + secondaryDN + " for " + primaryDN, e);
+		        log.warn("Could not set equivalentIdentity on: " + secondaryId + " for " + primaryId, e);
 		        failureCount++;
 			}
 	        
@@ -465,6 +474,9 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 			// primary subject in the session
 			Subject primarySubject = session.getSubject();
 
+			String dn = constructDn(primarySubject.getValue());
+			String dn2 = constructDn(secondarySubject.getValue());
+
 	        // get the context
 	        DirContext ctx = getContext();
 
@@ -472,14 +484,14 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	        boolean subjectExists = false;
 	        boolean confirmationRequested = false;
 	        try {
-	        	subjectExists = checkAttribute(primarySubject.getValue(), "cn", "*");
+	        	subjectExists = checkAttribute(dn, "cn", "*");
 	        } catch (Exception e) {
 	        	subjectExists = false;
 	        }
 	        if (subjectExists) {
 	        	// check if inverse request already exists
 		        confirmationRequested =
-		        	checkAttribute(primarySubject.getValue(), "equivalentIdentityRequest", secondarySubject.getValue());
+		        	checkAttribute(dn, "equivalentIdentityRequest", secondarySubject.getValue());
 		        if (confirmationRequested) {
 			        throw new InvalidRequest("", "Request already issued for: " + primarySubject.getValue() + " = " + secondarySubject.getValue());
 		        }
@@ -487,7 +499,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	        
 	        // check if request already exists
 	        confirmationRequested =
-	        	checkAttribute(secondarySubject.getValue(), "equivalentIdentityRequest", primarySubject.getValue());
+	        	checkAttribute(dn2, "equivalentIdentityRequest", primarySubject.getValue());
 	        if (confirmationRequested) {
 		        throw new InvalidRequest("", "Request already issued for: " + secondarySubject.getValue() + " = " + primarySubject.getValue());
 	        }
@@ -500,7 +512,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	        mod0 = new BasicAttribute("equivalentIdentityRequest", primarySubject.getValue());
 	        mods[0] = new ModificationItem(DirContext.ADD_ATTRIBUTE, mod0);
 	        // make the change
-	        ctx.modifyAttributes(secondarySubject.getValue(), mods);
+	        ctx.modifyAttributes(dn2, mods);
 	        log.debug("Successfully set equivalentIdentityRequest on: " + secondarySubject.getValue() + " for " + primarySubject.getValue());
 	        
 
@@ -522,6 +534,8 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 
 		    // get the context
 		    DirContext ctx = getContext();
+		    String dn = constructDn(primarySubject.getValue());
+		    String dn2 = constructDn(secondarySubject.getValue());
 
 		    // check if primary is confirming secondary
 		    boolean confirmationRequest =
@@ -540,13 +554,13 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		        Attribute mod1 = new BasicAttribute("equivalentIdentityRequest", secondarySubject.getValue());
 		        mods[1] = new ModificationItem(DirContext.REMOVE_ATTRIBUTE, mod1);
 		        // make the change
-		        ctx.modifyAttributes(primarySubject.getValue(), mods);
+		        ctx.modifyAttributes(dn, mods);
 		        log.debug("Successfully set equivalentIdentity: " + primarySubject.getValue() + " = " + secondarySubject.getValue());
 
 		        // update attribute on secondarySubject
 		        boolean subjectExists = false;
 		        try {
-		        	subjectExists = checkAttribute(secondarySubject.getValue(), "cn", "*");
+		        	subjectExists = checkAttribute(dn2, "cn", "*");
 		        } catch (Exception e) {
 		        	subjectExists = false;
 		        }
@@ -555,7 +569,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 			        mod0 = new BasicAttribute("equivalentIdentity", primarySubject.getValue());
 			        mods[0] = new ModificationItem(DirContext.ADD_ATTRIBUTE, mod0);
 			        // make the change
-			        ctx.modifyAttributes(secondarySubject.getValue(), mods);
+			        ctx.modifyAttributes(dn2, mods);
 			        log.debug("Successfully set reciprocal equivalentIdentity: " + secondarySubject.getValue() + " = " + primarySubject.getValue());
 		        }
 		        
@@ -582,7 +596,10 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		
 		try {
 			// the DN
-			String dn = subject.getValue();
+			String uidValue = subject.getValue();
+			
+			// ensure it is a DN
+		    String dn = constructDn(uidValue);
 
 			// either it's in the dn, or we should construct it
 		    String commonName = parseAttribute(dn, "cn");
@@ -592,6 +609,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 			    }
 			    commonName += p.getFamilyName();
 		    }
+		    Attribute uid = new BasicAttribute("uid", uidValue);
 		    Attribute cn = new BasicAttribute("cn", commonName);
 		    Attribute sn = new BasicAttribute("sn", p.getFamilyName());
 		    Attribute givenNames = new BasicAttribute("givenName");
@@ -609,12 +627,13 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		    DirContext ctx = getContext();
 
 		    // construct the list of modifications to make
-		    ModificationItem[] mods = new ModificationItem[5];
-		    mods[0] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, cn);
-		    mods[1] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, sn);
-		    mods[2] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, givenNames);
-		    mods[3] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, mail);
-		    mods[4] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, isVerified);
+		    ModificationItem[] mods = new ModificationItem[6];
+		    mods[0] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, uid);
+		    mods[1] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, cn);
+		    mods[2] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, sn);
+		    mods[3] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, givenNames);
+		    mods[4] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, mail);
+		    mods[5] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, isVerified);
 
 		    // make the change
 		    ctx.modifyAttributes(dn, mods);
@@ -657,6 +676,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	    try {
 	        /* get a handle to an Initial DirContext */
 	        DirContext ctx = getContext();
+	        String dn = constructDn(subject.getValue());
 
 	        /* construct the list of modifications to make */
 	        ModificationItem[] mods = new ModificationItem[1];
@@ -665,7 +685,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	        mods[0] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, isVerified);
 
 	        /* make the change */
-	        ctx.modifyAttributes(subject.getValue(), mods);
+	        ctx.modifyAttributes(dn, mods);
 	        log.debug( "Verified subject: " + subject.getValue() );
 	    } catch (NamingException e) {
 	        throw new ServiceFailure("4540", "Could not verify account: " + e.getMessage());
@@ -674,6 +694,20 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		return true;
 	}
 
+	private String constructDn(String subject) {
+		String dn = subject;
+		LdapName ldapName = null;
+		try {
+			ldapName = new LdapName(subject);
+		} catch (InvalidNameException e) {
+			log.warn("Subject not a valid DN: " + subject, e);
+			dn = "uid=" + subject + "," + subtree + "," + this.getBase(); 
+			log.info("Created DN from subject: " + dn, e);
+		}
+		
+		return dn;
+	}
+	
 	@Override
 	public Subject registerAccount(Session session, Person p) throws ServiceFailure, IdentifierNotUnique, InvalidCredentials,
     NotImplemented, InvalidRequest {
@@ -687,7 +721,10 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 
 	    // get the DN
 	    Subject subject = p.getSubject();
-	    String dn = subject.getValue();
+	    String uidValue = subject.getValue();
+	    
+	    // ensure it is a DN
+	    String dn = constructDn(uidValue);
 
 	    // construct the tree as needed
 	    try {
@@ -706,6 +743,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		    commonName += p.getFamilyName();
 	    }
 
+	    Attribute uid = new BasicAttribute("uid", uidValue);
 	    Attribute cn = new BasicAttribute("cn", commonName);
 	    Attribute sn = new BasicAttribute("sn", p.getFamilyName());
 	    Attribute givenNames = new BasicAttribute("givenName");
@@ -724,6 +762,9 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		    DirContext ctx = getContext();
 	        Attributes orig = new BasicAttributes();
 	        orig.put(objClasses);
+	        if (uid.getAll().hasMore()) {
+	        	orig.put(uid);
+	        }
 	        if (cn.getAll().hasMore()) {
 	        	orig.put(cn);
 	        }
@@ -780,7 +821,11 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		}
 		
 		SubjectInfo subjectInfo = new SubjectInfo();
-        String dn = subject.getValue();
+        String uidValue = subject.getValue();
+        
+        // ensure DN
+        String dn = constructDn(uidValue);
+
 		try {
 			DirContext ctx = getContext();
 			Attributes attributes = ctx.getAttributes(dn);
@@ -861,7 +906,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
         log.info("The start index is "+start.intValue());
         if (count == null || count <= 0) {
             log.info("The count is null or equal or less than 0===================");
-            count = DEFULAT_COUNT;
+            count = DEFAULT_COUNT;
             log.info("the count value is ==============="+count.intValue());
         } else {
             log.info("The count is not null or a positive number===================");
@@ -883,6 +928,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	    				"(dn=*" + query + "*)" +
 		    			"(cn=*" + query + "*)" +
 		    			"(sn=*" + query + "*)" +
+		    			"(uid=*" + query + "*)" +
 		    			"(givenName=*" + query + "*)" +
 		    			"(mail=*" + query + "*)" +
 		    		")";
@@ -1061,7 +1107,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 				// process as a person
 				Person person = new Person();
 				Subject subject = new Subject();
-				subject.setValue(name);
+				subject.setValue(name); // will replace with UID attribute
 				person.setSubject(subject);
 
 				while (values.hasMore()) {
@@ -1069,6 +1115,11 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 					String attributeName = attribute.getID();
 					String attributeValue = null;
 
+					if (attributeName.equalsIgnoreCase("uid")) {
+						attributeValue = (String) attribute.get();
+						log.debug("Found attribute: " + attributeName + "=" + attributeValue);
+						person.getSubject().setValue(attributeValue);
+					}
 					if (attributeName.equalsIgnoreCase("cn")) {
 						attributeValue = (String) attribute.get();
 						log.debug("Found attribute: " + attributeName + "=" + attributeValue);
@@ -1109,24 +1160,9 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 							items = (NamingEnumeration<String>) attribute.getAll();
 							while (items.hasMore()) {
 								attributeValue = items.next();
-								try {
-									attributeValue = CertificateManager.getInstance().standardizeDN(attributeValue);
-								} catch (Exception e) {
-									// not a DN - still add this placeholder
-									Subject equivalentIdentityRequest = new Subject();
-									equivalentIdentityRequest.setValue(attributeValue);
-									Person placeholderPerson = new Person();
-									placeholderPerson.setSubject(equivalentIdentityRequest);
-									placeholderPerson.addEmail("NA");
-									placeholderPerson.addGivenName("NA");
-									placeholderPerson.setFamilyName("NA");
-									if (!contains(pList.getPersonList(), placeholderPerson)) {
-										pList.addPerson(placeholderPerson);
-									}
-									continue;
-								}
 								
-								// it is a DN, carry on
+								
+								// try to look it up
 								Subject equivalentIdentityRequest = new Subject();
 								equivalentIdentityRequest.setValue(attributeValue);
 								log.debug("Found attribute: " + attributeName + "=" + attributeValue);
@@ -1178,16 +1214,8 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 								attributeValue = items.next();
 								log.debug("Found attribute: " + attributeName + "=" + attributeValue);
 								Subject equivalentIdentity = new Subject();
-								try {
-									attributeValue = CertificateManager.getInstance().standardizeDN(attributeValue);
-								} catch (Exception e) {
-									// not a DN, ignore and move on
-									equivalentIdentity.setValue(attributeValue);
-									person.addEquivalentIdentity(equivalentIdentity);
-									continue;
-								}
 								
-								// for DNs
+								// add as equivalent
 								equivalentIdentity.setValue(attributeValue);
 								person.addEquivalentIdentity(equivalentIdentity);
 								
@@ -1268,10 +1296,11 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 
 	        // get the context
 	        DirContext ctx = getContext();
-
+	        String dn = constructDn(primarySubject.getValue());
+	        
 	        // check if primary has the request from secondary
 	        boolean confirmationRequest =
-	        	checkAttribute(primarySubject.getValue(), "equivalentIdentityRequest", secondarySubject.getValue());
+	        	checkAttribute(dn, "equivalentIdentityRequest", secondarySubject.getValue());
 
 	        ModificationItem[] mods = null;
 	        Attribute mod0 = null;
@@ -1283,7 +1312,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		        mod0 = new BasicAttribute("equivalentIdentityRequest", secondarySubject.getValue());
 		        mods[0] = new ModificationItem(DirContext.REMOVE_ATTRIBUTE, mod0);
 		        // make the change
-		        ctx.modifyAttributes(primarySubject.getValue(), mods);
+		        ctx.modifyAttributes(dn, mods);
 		        log.debug("Successfully removed equivalentIdentityRequest on: " + primarySubject.getValue() + " for " + secondarySubject.getValue());
 	        }
 
@@ -1318,6 +1347,9 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		
 		SubjectInfo subjectInfo = new SubjectInfo();
 	    String dn = subject.getValue();
+	    // ensure DN
+        dn = constructDn(dn);
+        
 		try {
 			DirContext ctx = getContext();
 			Attributes attributes = ctx.getAttributes(dn);
@@ -1345,14 +1377,17 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 			// primary subject in the session
 			Subject primarySubject = session.getSubject();
 
+			String dn = constructDn(primarySubject.getValue());
+		    String dn2 = constructDn(secondarySubject.getValue());
+		    
 		    // get the context
 		    DirContext ctx = getContext();
 
 		    // check if primary has secondary equivalence
 		    boolean mappingExists =
-		    	checkAttribute(primarySubject.getValue(), "equivalentIdentity", secondarySubject.getValue());
+		    	checkAttribute(dn, "equivalentIdentity", secondarySubject.getValue());
 		    boolean reciprocolMappingExists =
-		    	checkAttribute(secondarySubject.getValue(), "equivalentIdentity", primarySubject.getValue());
+		    	checkAttribute(dn2, "equivalentIdentity", primarySubject.getValue());
 
 		    ModificationItem[] mods = null;
 		    Attribute mod0 = null;
@@ -1365,7 +1400,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 			        mod0 = new BasicAttribute("equivalentIdentity", secondarySubject.getValue());
 			        mods[0] = new ModificationItem(DirContext.REMOVE_ATTRIBUTE, mod0);
 			        // make the change
-			        ctx.modifyAttributes(primarySubject.getValue(), mods);
+			        ctx.modifyAttributes(dn, mods);
 			        log.debug("Successfully removed equivalentIdentity: " + primarySubject.getValue() + " = " + secondarySubject.getValue());
 		    	}
 		    	
@@ -1375,7 +1410,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 			        mod0 = new BasicAttribute("equivalentIdentity", primarySubject.getValue());
 			        mods[0] = new ModificationItem(DirContext.REMOVE_ATTRIBUTE, mod0);
 			        // make the change
-			        ctx.modifyAttributes(secondarySubject.getValue(), mods);
+			        ctx.modifyAttributes(dn2, mods);
 			        log.debug("Successfully removed reciprocal equivalentIdentity: " + secondarySubject.getValue() + " = " + primarySubject.getValue());
 		    	}
 		    	
