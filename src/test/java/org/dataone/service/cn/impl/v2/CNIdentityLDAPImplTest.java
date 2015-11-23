@@ -516,14 +516,19 @@ public class CNIdentityLDAPImplTest {
 			person.setFamilyName("orcid1");
 			person.addGivenName("orcid1");
 			person.addEmail("orcid1@dataone.org");
-
+			
 			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
+			
+			String dn = identityService.constructDn(subject.getValue());
+			Subject dnSubject = new Subject();
+			dnSubject.setValue(dn);
+			
 			Subject p = identityService.registerAccount(getSession(subject), person);
 			assertNotNull(p);
 
 			boolean check = false;
 			// check that new email is NOT there
-			check = identityService.checkAttribute(p.getValue(), "mail", newEmailAddress);
+			check = identityService.checkAttribute(dn, "mail", newEmailAddress);
 			assertFalse(check);
 
 			// change their email address, check that it is there
@@ -531,13 +536,10 @@ public class CNIdentityLDAPImplTest {
 			person.addEmail(newEmailAddress);
 			p = identityService.updateAccount(getSession(subject), person);
 			assertNotNull(p);
-			check = identityService.checkAttribute(p.getValue(), "mail", newEmailAddress);
+			check = identityService.checkAttribute(dn, "mail", newEmailAddress);
 			assertTrue(check);
 
 			//clean up
-			String dn = identityService.constructDn(p.getValue());
-			Subject dnSubject = new Subject();
-			dnSubject.setValue(dn);
 			check = identityService.removeSubject(dnSubject);
 			assertTrue(check);
 
