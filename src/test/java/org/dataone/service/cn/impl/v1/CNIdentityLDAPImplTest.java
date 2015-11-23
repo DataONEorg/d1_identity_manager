@@ -64,6 +64,7 @@ public class CNIdentityLDAPImplTest {
 
 	private String primarySubject = Settings.getConfiguration().getString("test.primarySubject");
 	private String secondarySubject = Settings.getConfiguration().getString("test.secondarySubject");
+	private String orcidSubject = Settings.getConfiguration().getString("test.orcidSubject");
 	private String groupName = Settings.getConfiguration().getString("test.groupName");
 	private String secondaryGroupName = Settings.getConfiguration().getString("test.secondaryGroupName");
 	private String cnAdmin = "CN=l0c1Test,DC=dataone,DC=org";
@@ -492,6 +493,47 @@ public class CNIdentityLDAPImplTest {
 			assertTrue(check);
 
             assertTrue(subjectInfo.getPerson(0).sizeEmailList() == 1);
+			//clean up
+			check = identityService.removeSubject(p);
+			assertTrue(check);
+
+		} catch (Exception e) {
+			e.printStackTrace();
+			fail();
+		}
+
+	}
+	
+	@Test
+	public void updateOrcidAccount()  {
+
+		try {
+			String newEmailAddress = "test2@dataone.org";
+			Subject subject = new Subject();
+			subject.setValue(orcidSubject);
+			Person person = new Person();
+			person.setSubject(subject);
+			person.setFamilyName("orcid1");
+			person.addGivenName("orcid1");
+			person.addEmail("orcid1@dataone.org");
+
+			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
+			Subject p = identityService.registerAccount(getSession(subject), person);
+			assertNotNull(p);
+
+			boolean check = false;
+			// check that new email is NOT there
+			check = identityService.checkAttribute(p.getValue(), "mail", newEmailAddress);
+			assertFalse(check);
+
+			// change their email address, check that it is there
+			person.clearEmailList();
+			person.addEmail(newEmailAddress);
+			p = identityService.updateAccount(getSession(subject), person);
+			assertNotNull(p);
+			check = identityService.checkAttribute(p.getValue(), "mail", newEmailAddress);
+			assertTrue(check);
+
 			//clean up
 			check = identityService.removeSubject(p);
 			assertTrue(check);
