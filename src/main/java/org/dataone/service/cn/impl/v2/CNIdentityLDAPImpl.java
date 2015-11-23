@@ -698,7 +698,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		return true;
 	}
 
-	private String constructDn(String subject) {
+	public String constructDn(String subject) {
 		String dn = subject;
 		LdapName ldapName = null;
 		try {

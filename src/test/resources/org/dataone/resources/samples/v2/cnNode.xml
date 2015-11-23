@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+    Document   : cnNode.xml
+    Created on : September 20, 2011, 3:42 PM
+    Author     : waltz
+    Description: Test CN Node
+-->
+<d1:node xmlns:d1="http://ns.dataone.org/service/types/v2.0"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        replicate="false" synchronize="false" type="cn" state="up">
+    <identifier>urn:node:testcnid</identifier>
+    <name>localhost-cntest-1</name>
+    <description>Nowhere Test Member node</description>
+    <baseURL>https://nowhere.com/cn</baseURL>
+    <services>
+        <service name="CNCore" version="v1" available="true"/>
+        <service name="CNRead" version="v1" available="true"/>
+        <service name="CNAuthorization" version="v1" available="true"/>
+        <service name="CNRegister" version="v1" available="true"/>
+        <service name="CNIdentity" version="v1" available="true">
+            <restriction methodName="mapIdentity">
+                    <subject>CN=Test1,O=Test,C=US,DC=cilogon,DC=org</subject>
+                    <subject>CN=Test2,O=Test,C=US,DC=cilogon,DC=org</subject>
+            </restriction>
+        </service>
+        <service name="CNReplication" version="v1" available="true"/>
+    </services>
+    <subject>cn=test,dc=dataone,dc=org</subject>
+    <subject>cn=test2,dc=dataone,dc=org</subject>
+    <contactSubject>cn=test,dc=dataone,dc=org</contactSubject>
+    <contactSubject>cn=test2,dc=dataone,dc=org</contactSubject>
+</d1:node>
