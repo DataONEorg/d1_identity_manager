@@ -20,7 +20,7 @@
  * $Id$
  */
 
-package org.dataone.service.cn.impl.v1;
+package org.dataone.service.cn.impl.v2;
 
 
 import static org.junit.Assert.assertFalse;
@@ -33,7 +33,7 @@ import org.dataone.service.exceptions.InvalidRequest;
 import org.dataone.service.exceptions.NotAuthorized;
 import org.dataone.service.exceptions.NotFound;
 import org.dataone.service.types.v1.Group;
-import org.dataone.service.types.v1.Node;
+import org.dataone.service.types.v2.Node;
 import org.dataone.service.types.v1.Person;
 import org.dataone.service.types.v1.Session;
 import org.dataone.service.types.v1.Subject;
@@ -298,7 +298,7 @@ public class CNIdentityLDAPImplTest {
                     
                     ByteArrayOutputStream cnNodeOutput = new ByteArrayOutputStream();
 
-                    InputStream is = this.getClass().getResourceAsStream("/org/dataone/resources/samples/v1/cnNode.xml");
+                    InputStream is = this.getClass().getResourceAsStream("/org/dataone/resources/samples/v2/cnNode.xml");
 
                     BufferedInputStream bInputStream = new BufferedInputStream(is);
                     byte[] barray = new byte[SIZE];
@@ -535,7 +535,10 @@ public class CNIdentityLDAPImplTest {
 			assertTrue(check);
 
 			//clean up
-			check = identityService.removeSubject(p);
+			String dn = identityService.constructDn(p.getValue());
+			Subject dnSubject = new Subject();
+			dnSubject.setValue(dn);
+			check = identityService.removeSubject(dnSubject);
 			assertTrue(check);
 
 		} catch (Exception e) {
@@ -624,7 +627,7 @@ public class CNIdentityLDAPImplTest {
 
             ByteArrayOutputStream cnNodeOutput = new ByteArrayOutputStream();
 
-            InputStream is = this.getClass().getResourceAsStream("/org/dataone/resources/samples/v1/cnNode.xml");
+            InputStream is = this.getClass().getResourceAsStream("/org/dataone/resources/samples/v2/cnNode.xml");
 
             BufferedInputStream bInputStream = new BufferedInputStream(is);
             byte[] barray = new byte[SIZE];
