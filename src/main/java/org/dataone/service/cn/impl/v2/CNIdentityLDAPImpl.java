@@ -128,21 +128,24 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	    // add all other rightsHolders as 'owner' too
 	    if (group.getRightsHolderList() != null) {
 		    for (Subject rightsHolder: group.getRightsHolderList()) {
-		    	owners.add(rightsHolder.getValue());
+		    	String ownerDn = constructDn(rightsHolder.getValue());
+				owners.add(ownerDn);
 		    }
 	    }
 	    
 	    // 'uniqueMember' is required, so always add the creator
 	    Attribute uniqueMembers = new BasicAttribute("uniqueMember");
-	    uniqueMembers.add(groupAdmin.getValue());
+    	String adminDn = constructDn(groupAdmin.getValue());
+	    uniqueMembers.add(adminDn);
 	    
 	    // add all other members as 'uniqueMembers'
 	    if (group.getHasMemberList() != null) {
 		    for (Subject member: group.getHasMemberList()) {
+		    	String memberDn = constructDn(member.getValue());
 		    	// check if they are trying to add a group as a member
 		    	boolean memberIsGroup = false;
 		    	try {
-		    		List<Object> values = this.getAttributeValues(member.getValue(), "uniqueMember");
+		    		List<Object> values = this.getAttributeValues(memberDn, "uniqueMember");
 		    		if (!values.isEmpty()) {
 		    			memberIsGroup = true;
 		    		}
@@ -154,7 +157,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	    		if (memberIsGroup) {
 	    			throw new InvalidRequest("0000", "Group member: " + member.getValue() + " cannot be another Group");
 	    		} else {
-		    		uniqueMembers.add(member.getValue());
+		    		uniqueMembers.add(memberDn);
 		    	}
 		    }
 	    }
@@ -1022,11 +1025,20 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 						items = (NamingEnumeration<String>) attribute.getAll();
 						while (items.hasMore()) {
 							attributeValue = items.next();
-							attributeValue = CertificateManager.getInstance().standardizeDN(attributeValue);
+							
+							// either the dn or look up the subject as housed in UID
+							String subjectId = attributeValue;
+							List<Object> uids = this.getAttributeValues(attributeValue, "uid");
+							if (uids != null && uids.size() > 0) {
+								subjectId = uids.get(0).toString();
+							} else {
+								subjectId = CertificateManager.getInstance().standardizeDN(attributeValue);
+							}
+							
 							Subject member = new Subject();
-							member.setValue(attributeValue);
+							member.setValue(subjectId);
 							group.addHasMember(member);
-							log.debug("Found attribute: " + attributeName + "=" + attributeValue);
+							
 							// look up details for this Group member?
 							if (recurse) {
 								// only one level of recursion for groups
