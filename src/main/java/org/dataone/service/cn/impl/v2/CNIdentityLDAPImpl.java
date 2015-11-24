@@ -124,7 +124,8 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	    
 	    // the creator is 'owner' by default
 	    Attribute owners = new BasicAttribute("owner");
-	    owners.add(groupAdmin.getValue());
+	    String groupAdminDn = constructDn(groupAdmin.getValue());
+	    owners.add(groupAdminDn);
 	    // add all other rightsHolders as 'owner' too
 	    if (group.getRightsHolderList() != null) {
 		    for (Subject rightsHolder: group.getRightsHolderList()) {
@@ -255,16 +256,23 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
         // do any of our subjects match the owners?
         ownerSearch:
         for (Subject user: sessionSubjects) {
-	        String userDN = user.getValue();
+	        String sessionSubject = user.getValue();
         	try {
-    	        userDN = CertificateManager.getInstance().standardizeDN(userDN);
+    	        sessionSubject = CertificateManager.getInstance().standardizeDN(sessionSubject);
         	} catch (IllegalArgumentException iae) {
         		// ignore, "public", "verified" etc...
         	}
 	        for (Object ownerObj: owners) {
 	        	String owner = (String) ownerObj;
-	        	owner = CertificateManager.getInstance().standardizeDN(owner);
-	        	if (userDN.equals(owner)) {
+	        	
+	        	// either use the dn or look up the subject as housed in UID
+				List<Object> uids = this.getAttributeValues(owner, "uid");
+				if (uids != null && uids.size() > 0) {
+					owner = uids.get(0).toString();
+				} else {
+					owner = CertificateManager.getInstance().standardizeDN(owner);
+				}	        	
+	        	if (sessionSubject.equals(owner)) {
 	        		canEdit = true;
 	        		break ownerSearch;
 	        	}
