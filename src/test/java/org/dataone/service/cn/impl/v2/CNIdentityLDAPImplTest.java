@@ -348,7 +348,7 @@ public class CNIdentityLDAPImplTest {
 			// clean up (this is not required for service to be functioning)
 			check = identityService.removeSubject(p1);
 			assertTrue(check);
-			check = identityService.removeSubject(p2);
+			check = identityService.removeEntry(identityService.constructDn(p2.getValue()));
 			assertTrue(check);
 			check = identityService.removeSubject(groupSubject);
 			assertTrue(check);
