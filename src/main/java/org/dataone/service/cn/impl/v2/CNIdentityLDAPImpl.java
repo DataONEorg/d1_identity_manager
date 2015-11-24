@@ -568,6 +568,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 			// either it's in the dn, or we should construct it
 		    String commonName = parseAttribute(dn, "cn");
 		    if (commonName == null) {
+		    	commonName = "";
 			    if (p.getGivenNameList() != null && !p.getGivenNameList().isEmpty()) {
 			    	commonName += p.getGivenName(0) + " ";
 			    }
@@ -701,6 +702,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	    // either it's in the dn, or we should construct it
 	    String commonName = parseAttribute(dn, "cn");
 	    if (commonName == null) {
+	    	commonName = "";
 		    if (p.getGivenNameList() != null && !p.getGivenNameList().isEmpty()) {
 		    	commonName += p.getGivenName(0) + " ";
 		    }
