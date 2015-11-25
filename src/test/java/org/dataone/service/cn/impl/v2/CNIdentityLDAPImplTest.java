@@ -67,6 +67,8 @@ public class CNIdentityLDAPImplTest {
 	private String orcidSubject = Settings.getConfiguration().getString("test.orcidSubject");
 	private String groupName = Settings.getConfiguration().getString("test.groupName");
 	private String secondaryGroupName = Settings.getConfiguration().getString("test.secondaryGroupName");
+	private String groupSubjectNonDn = Settings.getConfiguration().getString("test.nonDnGroup.subject");
+	private String groupNameNonDn = Settings.getConfiguration().getString("test.nonDnGroup.name");
 	private String cnAdmin = "CN=l0c1Test,DC=dataone,DC=org";
 
 
@@ -222,6 +224,100 @@ public class CNIdentityLDAPImplTest {
 			
 			Group group = new Group();
 			group.setGroupName(groupName);
+			group.setSubject(groupSubject);
+			
+			Subject secondaryGroupSubject = new Subject();
+			secondaryGroupSubject.setValue(secondaryGroupName);
+			
+			Group secondaryGroup = new Group();
+			secondaryGroup.setGroupName(secondaryGroupName);
+			secondaryGroup.setSubject(secondaryGroupSubject);
+
+			// only add the secondary person because p1 is owner (member by default)
+			SubjectList members = new SubjectList();
+			//members.addPerson(person1);
+			members.addSubject(person2.getSubject());
+
+			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
+//			identityService.setServer(server);
+			boolean check = false;
+
+			// create subjects
+			Subject subject = identityService.registerAccount(getSession(p1), person1);
+			assertNotNull(subject);
+			subject = identityService.registerAccount(getSession(p2), person2);
+			assertNotNull(subject);
+
+			// group
+			Subject retGroup = null;
+			retGroup = identityService.createGroup(getSession(p1), group);
+			assertNotNull(retGroup);
+			// add members
+			group.setHasMemberList(members.getSubjectList());
+			check = identityService.updateGroup(getSession(p1), group);
+			assertTrue(check);
+			// remove members
+			group.setHasMemberList(null);
+			check = identityService.updateGroup(getSession(p1), group);
+			assertTrue(check);
+			
+			// create secondary group
+			retGroup = identityService.createGroup(getSession(p1), secondaryGroup);
+			assertNotNull(retGroup);
+			
+			// attempt to add members that are a Group (should fail)
+			members.getSubjectList().add(secondaryGroupSubject);
+			group.setHasMemberList(members.getSubjectList());
+			check = false;
+			try {
+				check = identityService.updateGroup(getSession(p1), group);
+			} catch (InvalidRequest e) {
+				// expected exception
+			}
+			assertFalse(check);
+
+			// clean up (this is not required for service to be functioning)
+			check = identityService.removeSubject(p1);
+			assertTrue(check);
+			check = identityService.removeSubject(p2);
+			assertTrue(check);
+			check = identityService.removeSubject(groupSubject);
+			assertTrue(check);
+			check = identityService.removeSubject(secondaryGroupSubject);
+			assertTrue(check);
+
+		} catch (Exception e) {
+			e.printStackTrace();
+			fail();
+		}
+
+    }
+    
+    @Test
+    public void editGroupNonDn()  {
+
+    	try {
+			Subject p1 = new Subject();
+			p1.setValue(primarySubject);
+			Person person1 = new Person();
+			person1.setSubject(p1);
+			person1.setFamilyName("test1");
+			person1.addGivenName("test1");
+			person1.addEmail("test1@dataone.org");
+
+			Subject p2 = new Subject();
+			p2.setValue(secondarySubject);
+			Person person2 = new Person();
+			person2.setSubject(p2);
+			person2.setFamilyName("test2");
+			person2.addGivenName("test2");
+			person2.addEmail("test2@dataone.org");
+
+			Subject groupSubject = new Subject();
+			groupSubject.setValue(groupSubjectNonDn);
+			
+			Group group = new Group();
+			group.setGroupName(groupNameNonDn);
 			group.setSubject(groupSubject);
 			
 			Subject secondaryGroupSubject = new Subject();
