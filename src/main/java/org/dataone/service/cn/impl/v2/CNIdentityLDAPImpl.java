@@ -257,21 +257,16 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
         ownerSearch:
         for (Subject user: sessionSubjects) {
 	        String sessionSubject = user.getValue();
-        	try {
-    	        sessionSubject = CertificateManager.getInstance().standardizeDN(sessionSubject);
-        	} catch (IllegalArgumentException iae) {
-        		// ignore, "public", "verified" etc...
-        	}
+        	sessionSubject = CertificateManager.getInstance().standardizeDN(sessionSubject);
 	        for (Object ownerObj: owners) {
 	        	String owner = (String) ownerObj;
-	        	
 	        	// either use the dn or look up the subject as housed in UID
 				List<Object> uids = this.getAttributeValues(owner, "uid");
 				if (uids != null && uids.size() > 0) {
 					owner = uids.get(0).toString();
-				} else {
-					owner = CertificateManager.getInstance().standardizeDN(owner);
-				}	        	
+				}
+				owner = CertificateManager.getInstance().standardizeDN(owner);
+					        	
 	        	if (sessionSubject.equals(owner)) {
 	        		canEdit = true;
 	        		break ownerSearch;
@@ -297,18 +292,11 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
         // do any of our subjects match the subject being edited?
         for (Subject user: sessionSubjects) {
 	        String sessionSubject = user.getValue();
-        	try {
-    	        sessionSubject = CertificateManager.getInstance().standardizeDN(sessionSubject);
-        	} catch (IllegalArgumentException iae) {
-        		// ignore, "public", "verified" etc...
-        	}
+        	sessionSubject = CertificateManager.getInstance().standardizeDN(sessionSubject);
+        	
         	String listedSubject = personSubject.getValue();
-        	try {
-            	listedSubject = CertificateManager.getInstance().standardizeDN(listedSubject);
-        	} catch (IllegalArgumentException iae) {
-        		// ignore for non-DN subjects
-        	}
-
+        	listedSubject = CertificateManager.getInstance().standardizeDN(listedSubject);
+        	
         	if (sessionSubject.equals(listedSubject)) {
         		canEdit = true;
         		break;
