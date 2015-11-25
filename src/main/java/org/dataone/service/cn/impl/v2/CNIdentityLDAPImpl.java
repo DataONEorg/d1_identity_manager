@@ -109,9 +109,14 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 			InvalidToken, NotAuthorized, NotImplemented,
 			IdentifierNotUnique, InvalidRequest {
 
-    	Subject groupName = group.getSubject();
+    	Subject groupSubject = group.getSubject();
+    	String groupName = group.getGroupName();
 	    Subject groupAdmin = session.getSubject();
-
+	    
+	    // the DN for the group
+	    String dn = groupSubject.getValue();
+	    dn = constructDn(dn);
+	    
 		/* objectClass groupOfUniqueNames....
 		 * MUST ( uniqueMember $ cn )
 		 * MAY ( businessCategory $ seeAlso $ owner $ ou $ o $ description ) )
@@ -119,8 +124,17 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	    Attribute objClasses = new BasicAttribute("objectclass");
 	    objClasses.add("top");
 	    objClasses.add("groupOfUniqueNames");
+	    objClasses.add("inetOrgPerson");
 	    //objClasses.add("d1Group");
-	    Attribute cn = new BasicAttribute("cn", parseAttribute(groupName.getValue(), "cn"));
+	    
+	    // either it's in the dn, or we should construct it
+	    String commonName = parseAttribute(dn, "cn");
+	    if (commonName == null) {
+	    	commonName = groupName;
+	    }
+	    Attribute cn = new BasicAttribute("cn", commonName);	    
+	    Attribute uid = new BasicAttribute("uid", groupSubject.getValue());
+	    Attribute desc = new BasicAttribute("description", groupName);
 	    
 	    // the creator is 'owner' by default
 	    Attribute owners = new BasicAttribute("owner");
@@ -163,14 +177,13 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		    }
 	    }
 
-	    // the DN for the group
-	    String dn = groupName.getValue();
-
 	    try {
 		    DirContext ctx = getContext();
 	        Attributes orig = new BasicAttributes();
 	        orig.put(objClasses);
+	        orig.put(uid);
 	        orig.put(cn);
+	        orig.put(desc);
 	        orig.put(uniqueMembers);
 	        orig.put(owners);
 	        ctx.createSubcontext(dn, orig);
@@ -185,7 +198,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	    	throw new ServiceFailure("2490", "Could not create group: " + e.getMessage());
 	    }
 
-		return groupName;
+		return groupSubject;
 	}
 
 	@Override
@@ -244,14 +257,16 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 
     }
 	
-	private boolean canEditGroup(Session session, Subject groupName) throws NamingException, NotAuthorized {
+	private boolean canEditGroup(Session session, Subject groupSubject) throws NamingException, NotAuthorized {
 		// check that they have admin rights for group
         boolean canEdit = false;
         // collect all equivalent IDs for this session
         Collection<Subject> sessionSubjects = AuthUtils.authorizedClientSubjects(session);
  
+        String dn = constructDn(groupSubject.getValue());
+        
         // find the admin list of the group
-        List<Object> owners = this.getAttributeValues(groupName.getValue(), "owner");
+        List<Object> owners = this.getAttributeValues(dn, "owner");
  
         // do any of our subjects match the owners?
         ownerSearch:
@@ -1003,7 +1018,20 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 					String attributeName = attribute.getID();
 					String attributeValue = null;
 
+					if (attributeName.equalsIgnoreCase("uid")) {
+						attributeValue = (String) attribute.get();
+						group.getSubject().setValue(attributeValue);
+						log.debug("Found attribute: " + attributeName + "=" + attributeValue);
+					}
 					if (attributeName.equalsIgnoreCase("cn")) {
+						log.debug("Found attribute: " + attributeName + "=" + attributeValue);
+						attributeValue = (String) attribute.get();
+						// only set if we don't have it from descption
+						if (group.getGroupName() == null) {
+							group.setGroupName(attributeValue);
+						}
+					}
+					if (attributeName.equalsIgnoreCase("description")) {
 						attributeValue = (String) attribute.get();
 						group.setGroupName(attributeValue);
 						log.debug("Found attribute: " + attributeName + "=" + attributeValue);
@@ -1246,7 +1274,8 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	}
 
 	public boolean removeSubject(Subject p) {
-		return super.removeEntry(p.getValue());
+		String dn = constructDn(p.getValue());
+		return super.removeEntry(dn);
 	}
 	
 	@Override
