@@ -124,7 +124,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	    Attribute objClasses = new BasicAttribute("objectclass");
 	    objClasses.add("top");
 	    objClasses.add("groupOfUniqueNames");
-	    objClasses.add("inetOrgPerson");
+	    objClasses.add("uidObject");
 	    //objClasses.add("d1Group");
 	    
 	    // either it's in the dn, or we should construct it
