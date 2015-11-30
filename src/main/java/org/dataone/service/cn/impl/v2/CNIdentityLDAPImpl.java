@@ -40,6 +40,7 @@ import javax.naming.directory.ModificationItem;
 import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
 import javax.naming.ldap.LdapName;
+import javax.naming.ldap.Rdn;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -669,14 +670,9 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 			ldapName = new LdapName(subject);
 		} catch (InvalidNameException e) {
 			log.warn("Subject not a valid DN: " + subject);
-			dn = "uid=" + subject + "," + subtree + "," + this.getBase();
+			dn = "uid=" + Rdn.escapeValue(subject) + "," + subtree + "," + this.getBase();
 			log.info("Created DN from subject: " + dn);
-			try {
-				dn = new LdapName(dn).toString();
-			} catch (InvalidNameException e1) {
-				log.error("could not escape DN: " + dn);
-				return null;
-			}
+			
 		}
 		
 		return dn;
