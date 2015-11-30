@@ -671,7 +671,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 			ldapName = new LdapName(subject);
 		} catch (InvalidNameException e) {
 			log.warn("Subject not a valid DN: " + subject);
-			dn = "uid=" + subject.replaceAll("/", "\\/") + "," + subtree + "," + this.getBase();
+			dn = "uid=" + subject.replaceAll("/", "\\2f") + "," + subtree + "," + this.getBase();
 			log.info("Created DN from subject: " + dn);
 			
 		}
