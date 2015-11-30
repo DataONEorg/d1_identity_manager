@@ -606,7 +606,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		    mods[5] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, isVerified);
 
 		    // make the change
-		    ctx.modifyAttributes(dn, mods);
+		    ctx.modifyAttributes(new LdapName(dn), mods);
 		    log.debug( "Updated entry: " + subject.getValue() );
 		} catch (Exception e) {
 		    throw new ServiceFailure("4530", "Could not update account: " + e.getMessage());
@@ -672,7 +672,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		} catch (InvalidNameException e) {
 			log.warn("Subject not a valid DN: " + subject);
 			//dn = "uid=" + subject.replaceAll("/", "\\2f") + "," + subtree + "," + this.getBase();
-			dn = "uid=" + Rdn.escapeValue(subject) + "," + subtree + "," + this.getBase();
+			dn = "uid=" + subject + "," + subtree + "," + this.getBase();
 			log.info("Created DN from subject: " + dn);
 			
 		}
@@ -752,7 +752,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	        }
 	        orig.put(isVerified);
 	        // Add the entry
-	        ctx.createSubcontext(dn, orig);
+	        ctx.createSubcontext(new LdapName(dn), orig);
 	        log.debug( "Added entry " + dn);
 	    } catch (NameAlreadyBoundException e) {
 	    	String msg = "Entry " + dn + " already exists";
