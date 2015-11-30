@@ -370,7 +370,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 			dn = new LdapName(dn).toString();
 	        dn2 = new LdapName(dn2).toString();
 		} catch (InvalidNameException e) {
-	    	throw new ServiceFailure("2390", "Could properly escape DN: " + e.getMessage());
+	    	throw new ServiceFailure("2390", "Could not properly escape DN: " + e.getMessage());
 		}
         
         // check for pre-existing mapping
@@ -669,8 +669,14 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 			ldapName = new LdapName(subject);
 		} catch (InvalidNameException e) {
 			log.warn("Subject not a valid DN: " + subject);
-			dn = "uid=" + subject + "," + subtree + "," + this.getBase(); 
+			dn = "uid=" + subject + "," + subtree + "," + this.getBase();
 			log.info("Created DN from subject: " + dn);
+			try {
+				dn = new LdapName(dn).toString();
+			} catch (InvalidNameException e1) {
+				log.error("could not escape DN: " + dn);
+				return null;
+			}
 		}
 		
 		return dn;
