@@ -274,7 +274,11 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
         ownerSearch:
         for (Subject user: sessionSubjects) {
 	        String sessionSubject = user.getValue();
-        	sessionSubject = CertificateManager.getInstance().standardizeDN(sessionSubject);
+            try {
+            	sessionSubject = CertificateManager.getInstance().standardizeDN(sessionSubject);
+            } catch (IllegalArgumentException ex) {
+            	// non-DNs are acceptable
+            }
 	        for (Object ownerObj: owners) {
 	        	String owner = (String) ownerObj;
 	        	// either use the dn or look up the subject as housed in UID
@@ -282,8 +286,11 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 				if (uids != null && uids.size() > 0) {
 					owner = uids.get(0).toString();
 				}
-				owner = CertificateManager.getInstance().standardizeDN(owner);
-					        	
+				try {
+					owner = CertificateManager.getInstance().standardizeDN(owner);
+				} catch (IllegalArgumentException ex) {
+	            	// non-DNs are acceptable
+	            }       	
 	        	if (sessionSubject.equals(owner)) {
 	        		canEdit = true;
 	        		break ownerSearch;
@@ -309,11 +316,17 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
         // do any of our subjects match the subject being edited?
         for (Subject user: sessionSubjects) {
 	        String sessionSubject = user.getValue();
-        	sessionSubject = CertificateManager.getInstance().standardizeDN(sessionSubject);
-        	
+        	try {
+        		sessionSubject = CertificateManager.getInstance().standardizeDN(sessionSubject);
+        	} catch (IllegalArgumentException ex) {
+            	// non-DNs are acceptable
+            }
         	String listedSubject = personSubject.getValue();
-        	listedSubject = CertificateManager.getInstance().standardizeDN(listedSubject);
-        	
+        	try {
+        		listedSubject = CertificateManager.getInstance().standardizeDN(listedSubject);
+        	} catch (IllegalArgumentException ex) {
+            	// non-DNs are acceptable
+            }
         	if (sessionSubject.equals(listedSubject)) {
         		canEdit = true;
         		break;
@@ -989,7 +1002,11 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		SubjectInfo pList = new SubjectInfo();
 
 		// convert to use the standardized string representation
-		name = CertificateManager.getInstance().standardizeDN(name);
+		try {
+			name = CertificateManager.getInstance().standardizeDN(name);
+		} catch (IllegalArgumentException ex) {
+        	// non-DNs are acceptable
+        }	
 		if (!visitedSubjects.contains(name)) {
 			visitedSubjects.add(name);
 		}
