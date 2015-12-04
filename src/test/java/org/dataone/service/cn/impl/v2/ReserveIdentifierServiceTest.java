@@ -180,7 +180,7 @@ public class ReserveIdentifierServiceTest {
 
 			// identifier
 			Identifier pid = new Identifier();
-			pid.setValue("test");
+			pid.setValue("testOrcid");
 
 			boolean check = false;
 
@@ -229,7 +229,7 @@ public class ReserveIdentifierServiceTest {
 
 			// identifier
 			Identifier pid = new Identifier();
-			pid.setValue("test");
+			pid.setValue("testOrcidReverse");
 
 			boolean check = false;
 
