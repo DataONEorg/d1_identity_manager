@@ -20,7 +20,7 @@
  * $Id$
  */
 
-package org.dataone.service.cn.impl.v1;
+package org.dataone.service.cn.impl.v2;
 
 
 import static org.junit.Assert.assertFalse;
@@ -33,7 +33,7 @@ import org.dataone.service.exceptions.InvalidRequest;
 import org.dataone.service.exceptions.NotAuthorized;
 import org.dataone.service.exceptions.NotFound;
 import org.dataone.service.types.v1.Group;
-import org.dataone.service.types.v1.Node;
+import org.dataone.service.types.v2.Node;
 import org.dataone.service.types.v1.Person;
 import org.dataone.service.types.v1.Session;
 import org.dataone.service.types.v1.Subject;
@@ -64,8 +64,11 @@ public class CNIdentityLDAPImplTest {
 
 	private String primarySubject = Settings.getConfiguration().getString("test.primarySubject");
 	private String secondarySubject = Settings.getConfiguration().getString("test.secondarySubject");
+	private String orcidSubject = Settings.getConfiguration().getString("test.orcidSubject");
 	private String groupName = Settings.getConfiguration().getString("test.groupName");
 	private String secondaryGroupName = Settings.getConfiguration().getString("test.secondaryGroupName");
+	private String groupSubjectNonDn = Settings.getConfiguration().getString("test.nonDnGroup.subject");
+	private String groupNameNonDn = Settings.getConfiguration().getString("test.nonDnGroup.name");
 	private String cnAdmin = "CN=l0c1Test,DC=dataone,DC=org";
 
 
@@ -289,6 +292,307 @@ public class CNIdentityLDAPImplTest {
 		}
 
     }
+    
+    @Test
+    public void editGroupNonDn()  {
+
+    	try {
+			Subject p1 = new Subject();
+			p1.setValue(primarySubject);
+			Person person1 = new Person();
+			person1.setSubject(p1);
+			person1.setFamilyName("test1");
+			person1.addGivenName("test1");
+			person1.addEmail("test1@dataone.org");
+
+			Subject p2 = new Subject();
+			p2.setValue(secondarySubject);
+			Person person2 = new Person();
+			person2.setSubject(p2);
+			person2.setFamilyName("test2");
+			person2.addGivenName("test2");
+			person2.addEmail("test2@dataone.org");
+
+			Subject groupSubject = new Subject();
+			groupSubject.setValue(groupSubjectNonDn);
+			
+			Group group = new Group();
+			group.setGroupName(groupNameNonDn);
+			group.setSubject(groupSubject);
+			
+			Subject secondaryGroupSubject = new Subject();
+			secondaryGroupSubject.setValue(secondaryGroupName);
+			
+			Group secondaryGroup = new Group();
+			secondaryGroup.setGroupName(secondaryGroupName);
+			secondaryGroup.setSubject(secondaryGroupSubject);
+
+			// only add the secondary person because p1 is owner (member by default)
+			SubjectList members = new SubjectList();
+			//members.addPerson(person1);
+			members.addSubject(person2.getSubject());
+
+			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
+//			identityService.setServer(server);
+			boolean check = false;
+
+			// create subjects
+			Subject subject = identityService.registerAccount(getSession(p1), person1);
+			assertNotNull(subject);
+			subject = identityService.registerAccount(getSession(p2), person2);
+			assertNotNull(subject);
+
+			// group
+			Subject retGroup = null;
+			retGroup = identityService.createGroup(getSession(p1), group);
+			assertNotNull(retGroup);
+			// add members
+			group.setHasMemberList(members.getSubjectList());
+			check = identityService.updateGroup(getSession(p1), group);
+			assertTrue(check);
+			// remove members
+			group.setHasMemberList(null);
+			check = identityService.updateGroup(getSession(p1), group);
+			assertTrue(check);
+			
+			// create secondary group
+			retGroup = identityService.createGroup(getSession(p1), secondaryGroup);
+			assertNotNull(retGroup);
+			
+			// attempt to add members that are a Group (should fail)
+			members.getSubjectList().add(secondaryGroupSubject);
+			group.setHasMemberList(members.getSubjectList());
+			check = false;
+			try {
+				check = identityService.updateGroup(getSession(p1), group);
+			} catch (InvalidRequest e) {
+				// expected exception
+			}
+			assertFalse(check);
+
+			// clean up (this is not required for service to be functioning)
+			check = identityService.removeSubject(p1);
+			assertTrue(check);
+			check = identityService.removeSubject(p2);
+			assertTrue(check);
+			check = identityService.removeSubject(groupSubject);
+			assertTrue(check);
+			check = identityService.removeSubject(secondaryGroupSubject);
+			assertTrue(check);
+
+		} catch (Exception e) {
+			e.printStackTrace();
+			fail();
+		}
+
+    }
+    
+    @Test
+    public void editGroupOrcidNonDn()  {
+
+    	try {
+			Subject p1 = new Subject();
+			p1.setValue(primarySubject);
+			Person person1 = new Person();
+			person1.setSubject(p1);
+			person1.setFamilyName("test1");
+			person1.addGivenName("test1");
+			person1.addEmail("test1@dataone.org");
+
+			Subject p2 = new Subject();
+			p2.setValue(orcidSubject);
+			Person person2 = new Person();
+			person2.setSubject(p2);
+			person2.setFamilyName("test2");
+			person2.addGivenName("test2");
+			person2.addEmail("test2@dataone.org");
+
+			Subject groupSubject = new Subject();
+			groupSubject.setValue(groupSubjectNonDn);
+			
+			Group group = new Group();
+			group.setGroupName(groupNameNonDn);
+			group.setSubject(groupSubject);
+
+			// only add the secondary person because p1 is owner (member by default)
+			SubjectList members = new SubjectList();
+			//members.addPerson(person1);
+			members.addSubject(person2.getSubject());
+
+			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
+			boolean check = false;
+
+			// create subjects
+			Subject subject = identityService.registerAccount(getSession(p1), person1);
+			assertNotNull(subject);
+			subject = identityService.registerAccount(getSession(p2), person2);
+			assertNotNull(subject);
+
+			// group
+			Subject retGroup = null;
+			retGroup = identityService.createGroup(getSession(p1), group);
+			assertNotNull(retGroup);
+			// add members
+			group.setHasMemberList(members.getSubjectList());
+			check = identityService.updateGroup(getSession(p1), group);
+			assertTrue(check);
+			// remove members
+			group.setHasMemberList(null);
+			check = identityService.updateGroup(getSession(p1), group);
+			assertTrue(check);
+
+			// clean up (this is not required for service to be functioning)
+			check = identityService.removeSubject(p1);
+			assertTrue(check);
+			check = identityService.removeEntry(identityService.constructDn(p2.getValue()));
+			assertTrue(check);
+			check = identityService.removeSubject(groupSubject);
+			assertTrue(check);
+
+		} catch (Exception e) {
+			e.printStackTrace();
+			fail();
+		}
+
+    }
+    
+    @Test
+    public void editGroupOrcid()  {
+
+    	try {
+			Subject p1 = new Subject();
+			p1.setValue(primarySubject);
+			Person person1 = new Person();
+			person1.setSubject(p1);
+			person1.setFamilyName("test1");
+			person1.addGivenName("test1");
+			person1.addEmail("test1@dataone.org");
+
+			Subject p2 = new Subject();
+			p2.setValue(orcidSubject);
+			Person person2 = new Person();
+			person2.setSubject(p2);
+			person2.setFamilyName("test2");
+			person2.addGivenName("test2");
+			person2.addEmail("test2@dataone.org");
+
+			Subject groupSubject = new Subject();
+			groupSubject.setValue(groupName);
+			
+			Group group = new Group();
+			group.setGroupName(groupName);
+			group.setSubject(groupSubject);
+
+			// only add the secondary person because p1 is owner (member by default)
+			SubjectList members = new SubjectList();
+			//members.addPerson(person1);
+			members.addSubject(person2.getSubject());
+
+			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
+			boolean check = false;
+
+			// create subjects
+			Subject subject = identityService.registerAccount(getSession(p1), person1);
+			assertNotNull(subject);
+			subject = identityService.registerAccount(getSession(p2), person2);
+			assertNotNull(subject);
+
+			// group
+			Subject retGroup = null;
+			retGroup = identityService.createGroup(getSession(p1), group);
+			assertNotNull(retGroup);
+			// add members
+			group.setHasMemberList(members.getSubjectList());
+			check = identityService.updateGroup(getSession(p1), group);
+			assertTrue(check);
+			// remove members
+			group.setHasMemberList(null);
+			check = identityService.updateGroup(getSession(p1), group);
+			assertTrue(check);
+
+			// clean up (this is not required for service to be functioning)
+			check = identityService.removeSubject(p1);
+			assertTrue(check);
+			check = identityService.removeEntry(identityService.constructDn(p2.getValue()));
+			assertTrue(check);
+			check = identityService.removeSubject(groupSubject);
+			assertTrue(check);
+
+		} catch (Exception e) {
+			e.printStackTrace();
+			fail();
+		}
+
+    }
+    
+    @Test
+    public void editGroupOrcidReverse()  {
+
+    	try {
+			Subject p1 = new Subject();
+			p1.setValue(orcidSubject);
+			Person person1 = new Person();
+			person1.setSubject(p1);
+			person1.setFamilyName("test1");
+			person1.addGivenName("test1");
+			person1.addEmail("test1@dataone.org");
+
+			Subject p2 = new Subject();
+			p2.setValue(primarySubject);
+			Person person2 = new Person();
+			person2.setSubject(p2);
+			person2.setFamilyName("test2");
+			person2.addGivenName("test2");
+			person2.addEmail("test2@dataone.org");
+
+			Subject groupSubject = new Subject();
+			groupSubject.setValue(groupName);
+			
+			Group group = new Group();
+			group.setGroupName(groupName);
+			group.setSubject(groupSubject);
+
+			// only add the secondary person because p1 is owner (member by default)
+			SubjectList members = new SubjectList();
+			//members.addPerson(person1);
+			members.addSubject(person2.getSubject());
+
+			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
+			boolean check = false;
+
+			// create subjects
+			Subject subject = identityService.registerAccount(getSession(p1), person1);
+			assertNotNull(subject);
+			subject = identityService.registerAccount(getSession(p2), person2);
+			assertNotNull(subject);
+
+			// group
+			Subject retGroup = null;
+			retGroup = identityService.createGroup(getSession(p1), group);
+			assertNotNull(retGroup);
+			// add members
+			group.setHasMemberList(members.getSubjectList());
+			check = identityService.updateGroup(getSession(p1), group);
+			assertTrue(check);
+			// remove members
+			group.setHasMemberList(null);
+			check = identityService.updateGroup(getSession(p1), group);
+			assertTrue(check);
+
+			// clean up (this is not required for service to be functioning)
+			check = identityService.removeEntry(identityService.constructDn(p1.getValue()));
+			assertTrue(check);
+			check = identityService.removeEntry(identityService.constructDn(p2.getValue()));
+			assertTrue(check);
+			check = identityService.removeSubject(groupSubject);
+			assertTrue(check);
+
+		} catch (Exception e) {
+			e.printStackTrace();
+			fail();
+		}
+
+    }
 
 	@Test
 	public void mapIdentityTwoWay()  throws Exception  {
@@ -297,7 +601,7 @@ public class CNIdentityLDAPImplTest {
                     
                     ByteArrayOutputStream cnNodeOutput = new ByteArrayOutputStream();
 
-                    InputStream is = this.getClass().getResourceAsStream("/org/dataone/resources/samples/v1/cnNode.xml");
+                    InputStream is = this.getClass().getResourceAsStream("/org/dataone/resources/samples/v2/cnNode.xml");
 
                     BufferedInputStream bInputStream = new BufferedInputStream(is);
                     byte[] barray = new byte[SIZE];
@@ -374,6 +678,194 @@ public class CNIdentityLDAPImplTest {
 			check = identityService.removeSubject(p1);
 			assertTrue(check);
 			check = identityService.removeSubject(p2);
+			assertTrue(check);
+                        nodeRegistryService.deleteNode(cnNodeReference);
+                        
+		} catch (Exception e) {
+			e.printStackTrace();
+			fail();
+		}
+
+	}
+	
+	@Test
+	public void mapIdentityTwoWayOrcid()  throws Exception  {
+		NodeRegistryService nodeRegistryService = new NodeRegistryService();
+		try {
+                    
+			ByteArrayOutputStream cnNodeOutput = new ByteArrayOutputStream();
+			InputStream is = this.getClass().getResourceAsStream("/org/dataone/resources/samples/v2/cnNode.xml");
+			
+			BufferedInputStream bInputStream = new BufferedInputStream(is);
+			byte[] barray = new byte[SIZE];
+			int nRead = 0;
+			while ((nRead = bInputStream.read(barray, 0, SIZE)) != -1) {
+			    cnNodeOutput.write(barray, 0, nRead);
+			}
+			bInputStream.close();
+			ByteArrayInputStream bArrayInputStream = new ByteArrayInputStream(cnNodeOutput.toByteArray());
+			Node testCNNode = TypeMarshaller.unmarshalTypeFromStream(Node.class, bArrayInputStream);
+			
+			NodeReference cnNodeReference = testCNNode.getIdentifier();
+			try {
+				nodeRegistryService.getNode(testCNNode.getIdentifier());
+			} catch (NotFound nf) {
+				cnNodeReference = nodeRegistryService.register(testCNNode);
+			}
+			
+			assertNotNull(cnNodeReference);
+			testCNNode.setIdentifier(cnNodeReference);
+			nodeAccess.setNodeApproved(cnNodeReference, Boolean.TRUE);
+
+			Subject p1 = new Subject();
+			p1.setValue(primarySubject);
+			Person person1 = new Person();
+			person1.setSubject(p1);
+			person1.setFamilyName("test1");
+			person1.addGivenName("test1");
+			person1.addEmail("test1@dataone.org");
+
+			Subject p2 = new Subject();
+			p2.setValue(orcidSubject);
+			Person person2 = new Person();
+			person2.setSubject(p2);
+			person2.setFamilyName("test2");
+			person2.addGivenName("test2");
+			person2.addEmail("test2@dataone.org");
+			
+
+			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
+			
+			String dn1 = identityService.constructDn(primarySubject);
+			String dn2 = identityService.constructDn(orcidSubject);
+
+			boolean check = false;
+
+			// create subjects
+			Subject subject = identityService.registerAccount(getSession(p1), person1);
+			assertNotNull(subject);
+			subject = identityService.registerAccount(getSession(p2), person2);
+			assertNotNull(subject);
+
+			// map p1 to p2
+			check = identityService.requestMapIdentity(getSession(p1), p2);
+			assertTrue(check);
+			// check pending
+			check = identityService.checkAttribute(dn2, "equivalentIdentityRequest", p1.getValue());
+			assertTrue(check);
+			// not yet confirmed on either end
+			check = identityService.checkAttribute(dn1, "equivalentIdentity", p2.getValue());
+			assertFalse(check);
+			check = identityService.checkAttribute(dn2, "equivalentIdentity", p1.getValue());
+			assertFalse(check);
+			// accept request
+			check = identityService.confirmMapIdentity(getSession(p2), p1);
+			assertTrue(check);
+
+			// double check reciprocal mapping
+			check = identityService.checkAttribute(dn1, "equivalentIdentity", p2.getValue());
+			assertTrue(check);
+			check = identityService.checkAttribute(dn2, "equivalentIdentity", p1.getValue());
+			assertTrue(check);
+
+			// clean up (this is not required for service to be functioning)
+			check = identityService.removeEntry(dn1);
+			assertTrue(check);
+			check = identityService.removeEntry(dn2);
+			assertTrue(check);
+                        nodeRegistryService.deleteNode(cnNodeReference);
+                        
+		} catch (Exception e) {
+			e.printStackTrace();
+			fail();
+		}
+
+	}
+	
+	@Test
+	public void mapIdentityTwoWayOrcidReverse()  throws Exception  {
+		NodeRegistryService nodeRegistryService = new NodeRegistryService();
+		try {
+                    
+			ByteArrayOutputStream cnNodeOutput = new ByteArrayOutputStream();
+			InputStream is = this.getClass().getResourceAsStream("/org/dataone/resources/samples/v2/cnNode.xml");
+			
+			BufferedInputStream bInputStream = new BufferedInputStream(is);
+			byte[] barray = new byte[SIZE];
+			int nRead = 0;
+			while ((nRead = bInputStream.read(barray, 0, SIZE)) != -1) {
+			    cnNodeOutput.write(barray, 0, nRead);
+			}
+			bInputStream.close();
+			ByteArrayInputStream bArrayInputStream = new ByteArrayInputStream(cnNodeOutput.toByteArray());
+			Node testCNNode = TypeMarshaller.unmarshalTypeFromStream(Node.class, bArrayInputStream);
+			
+			NodeReference cnNodeReference = testCNNode.getIdentifier();
+			try {
+				nodeRegistryService.getNode(testCNNode.getIdentifier());
+			} catch (NotFound nf) {
+				cnNodeReference = nodeRegistryService.register(testCNNode);
+			}
+			
+			assertNotNull(cnNodeReference);
+			testCNNode.setIdentifier(cnNodeReference);
+			nodeAccess.setNodeApproved(cnNodeReference, Boolean.TRUE);
+
+			Subject p1 = new Subject();
+			p1.setValue(orcidSubject);
+			Person person1 = new Person();
+			person1.setSubject(p1);
+			person1.setFamilyName("test1");
+			person1.addGivenName("test1");
+			person1.addEmail("test1@dataone.org");
+
+			Subject p2 = new Subject();
+			p2.setValue(primarySubject);
+			Person person2 = new Person();
+			person2.setSubject(p2);
+			person2.setFamilyName("test2");
+			person2.addGivenName("test2");
+			person2.addEmail("test2@dataone.org");
+			
+
+			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
+			
+			String dn1 = identityService.constructDn(orcidSubject);
+			String dn2 = identityService.constructDn(primarySubject);
+
+			boolean check = false;
+
+			// create subjects
+			Subject subject = identityService.registerAccount(getSession(p1), person1);
+			assertNotNull(subject);
+			subject = identityService.registerAccount(getSession(p2), person2);
+			assertNotNull(subject);
+
+			// map p1 to p2
+			check = identityService.requestMapIdentity(getSession(p1), p2);
+			assertTrue(check);
+			// check pending
+			check = identityService.checkAttribute(dn2, "equivalentIdentityRequest", p1.getValue());
+			assertTrue(check);
+			// not yet confirmed on either end
+			check = identityService.checkAttribute(dn1, "equivalentIdentity", p2.getValue());
+			assertFalse(check);
+			check = identityService.checkAttribute(dn2, "equivalentIdentity", p1.getValue());
+			assertFalse(check);
+			// accept request
+			check = identityService.confirmMapIdentity(getSession(p2), p1);
+			assertTrue(check);
+
+			// double check reciprocal mapping
+			check = identityService.checkAttribute(dn1, "equivalentIdentity", p2.getValue());
+			assertTrue(check);
+			check = identityService.checkAttribute(dn2, "equivalentIdentity", p1.getValue());
+			assertTrue(check);
+
+			// clean up (this is not required for service to be functioning)
+			check = identityService.removeEntry(dn1);
+			assertTrue(check);
+			check = identityService.removeEntry(dn2);
 			assertTrue(check);
                         nodeRegistryService.deleteNode(cnNodeReference);
                         
@@ -502,6 +994,52 @@ public class CNIdentityLDAPImplTest {
 		}
 
 	}
+	
+	@Test
+	public void updateOrcidAccount()  {
+
+		try {
+			String newEmailAddress = "test2@dataone.org";
+			Subject subject = new Subject();
+			subject.setValue(orcidSubject);
+			Person person = new Person();
+			person.setSubject(subject);
+			person.setFamilyName("orcid1");
+			person.addGivenName("orcid1");
+			person.addEmail("orcid1@dataone.org");
+			
+			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
+			
+			String dn = identityService.constructDn(subject.getValue());
+			Subject dnSubject = new Subject();
+			dnSubject.setValue(dn);
+			
+			Subject p = identityService.registerAccount(getSession(subject), person);
+			assertNotNull(p);
+
+			boolean check = false;
+			// check that new email is NOT there
+			check = identityService.checkAttribute(dn, "mail", newEmailAddress);
+			assertFalse(check);
+
+			// change their email address, check that it is there
+			person.clearEmailList();
+			person.addEmail(newEmailAddress);
+			p = identityService.updateAccount(getSession(subject), person);
+			assertNotNull(p);
+			check = identityService.checkAttribute(dn, "mail", newEmailAddress);
+			assertTrue(check);
+
+			//clean up
+			check = identityService.removeSubject(dnSubject);
+			assertTrue(check);
+
+		} catch (Exception e) {
+			e.printStackTrace();
+			fail();
+		}
+
+	}
 
 	@Test
 	public void listSubjects()  {
@@ -582,7 +1120,7 @@ public class CNIdentityLDAPImplTest {
 
             ByteArrayOutputStream cnNodeOutput = new ByteArrayOutputStream();
 
-            InputStream is = this.getClass().getResourceAsStream("/org/dataone/resources/samples/v1/cnNode.xml");
+            InputStream is = this.getClass().getResourceAsStream("/org/dataone/resources/samples/v2/cnNode.xml");
 
             BufferedInputStream bInputStream = new BufferedInputStream(is);
             byte[] barray = new byte[SIZE];
