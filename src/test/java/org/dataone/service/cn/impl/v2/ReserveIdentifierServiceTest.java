@@ -20,7 +20,7 @@
  * $Id$
  */
 
-package org.dataone.service.cn.impl.v1;
+package org.dataone.service.cn.impl.v2;
 
 
 import static org.junit.Assert.assertNotNull;
@@ -40,6 +40,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.dataone.client.v2.itk.D1Client;
 import org.dataone.configuration.Settings;
+import org.dataone.service.cn.impl.v2.ReserveIdentifierService;
 import org.dataone.service.exceptions.IdentifierNotUnique;
 import org.dataone.service.exceptions.NotAuthorized;
 import org.dataone.service.types.v1.Identifier;
@@ -71,6 +72,8 @@ public class ReserveIdentifierServiceTest {
 
 	private String primarySubject = Settings.getConfiguration().getString("test.primarySubject");
 	private String secondarySubject = Settings.getConfiguration().getString("test.secondarySubject");
+	private String orcidSubject = Settings.getConfiguration().getString("test.orcidSubject");
+
 
 	private static Session getSession(Subject subject) {
 		Session session = new Session();
@@ -125,6 +128,104 @@ public class ReserveIdentifierServiceTest {
 			// another subject
 			Subject anotherSubject = new Subject();
 			anotherSubject.setValue(secondarySubject);
+
+			// identifier
+			Identifier pid = new Identifier();
+			pid.setValue("test");
+
+			boolean check = false;
+
+			Identifier retPid = null;
+			//service.setServer(server);
+			retPid = service.reserveIdentifier(getSession(subject), pid);
+			assertNotNull(retPid);
+
+			// make sure that we get an error when attempting to reserve as  someone else
+			try {
+				retPid = service.reserveIdentifier(getSession(anotherSubject), pid);
+			} catch (NotAuthorized na) {
+				retPid = null;
+			}
+			assertNull(retPid);
+
+			// check that he still have the reservation
+			check = service.hasReservation(getSession(subject), subject, pid);
+			assertTrue(check);
+
+			// now clean up
+			check = service.removeReservation(getSession(subject),  pid);
+			assertTrue(check);
+
+		} catch (Exception e) {
+			e.printStackTrace();
+			fail();
+		}
+
+	}
+	
+	@Test
+	public void reserveIdentifierOrcid()  {
+
+		try {
+
+			ReserveIdentifierService service = new ReserveIdentifierService();
+
+			// subject
+			Subject subject = new Subject();
+			subject.setValue(orcidSubject);
+
+			// another subject
+			Subject anotherSubject = new Subject();
+			anotherSubject.setValue(secondarySubject);
+
+			// identifier
+			Identifier pid = new Identifier();
+			pid.setValue("test");
+
+			boolean check = false;
+
+			Identifier retPid = null;
+			//service.setServer(server);
+			retPid = service.reserveIdentifier(getSession(subject), pid);
+			assertNotNull(retPid);
+
+			// make sure that we get an error when attempting to reserve as  someone else
+			try {
+				retPid = service.reserveIdentifier(getSession(anotherSubject), pid);
+			} catch (NotAuthorized na) {
+				retPid = null;
+			}
+			assertNull(retPid);
+
+			// check that he still have the reservation
+			check = service.hasReservation(getSession(subject), subject, pid);
+			assertTrue(check);
+
+			// now clean up
+			check = service.removeReservation(getSession(subject),  pid);
+			assertTrue(check);
+
+		} catch (Exception e) {
+			e.printStackTrace();
+			fail();
+		}
+
+	}
+	
+	@Test
+	public void reserveIdentifierOrcidReverse()  {
+
+		try {
+
+			ReserveIdentifierService service = new ReserveIdentifierService();
+
+			// subject
+			Subject subject = new Subject();
+			subject.setValue(primarySubject);
+
+			// another subject
+			Subject anotherSubject = new Subject();
+			anotherSubject.setValue(orcidSubject);
 
 			// identifier
 			Identifier pid = new Identifier();
@@ -237,6 +338,49 @@ public class ReserveIdentifierServiceTest {
             // subject
             Subject subject = new Subject();
             subject.setValue(primarySubject);
+
+            // another subject
+            Subject anotherSubject = new Subject();
+            anotherSubject.setValue(secondarySubject);
+
+            // identifier
+            Identifier pid = new Identifier();
+            pid.setValue("test");
+
+            boolean check = false;
+
+            Identifier retPid = null;
+            //service.setServer(server);
+            retPid = service.generateIdentifier(getSession(subject), "UUID", null);
+            log.debug("Generated PID: " + retPid.getValue());
+            assertNotNull(retPid);
+            assertTrue(retPid.getValue().startsWith("urn:uuid:"));
+
+            // check that he still have the reservation
+            check = service.hasReservation(getSession(subject), subject, retPid);
+            assertTrue(check);
+
+            // now clean up
+            check = service.removeReservation(getSession(subject), retPid);
+            assertTrue(check);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            fail();
+        }
+
+    }
+    
+    @Test
+    public void generateIdentifierOrcid()  {
+
+        try {
+
+            ReserveIdentifierService service = new ReserveIdentifierService();
+
+            // subject
+            Subject subject = new Subject();
+            subject.setValue(orcidSubject);
 
             // another subject
             Subject anotherSubject = new Subject();
