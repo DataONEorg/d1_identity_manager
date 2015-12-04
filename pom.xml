@@ -8,7 +8,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <d1_libclient_version>2.0.0</d1_libclient_version>
-        <d1_cn_noderegistry_version>2.0.0</d1_cn_noderegistry_version>
+        <d1_cn_noderegistry_version>2.0.1</d1_cn_noderegistry_version>
     </properties>
     <repositories>
         <repository>
