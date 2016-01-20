@@ -158,7 +158,11 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 	    // add all other members as 'uniqueMembers'
 	    if (group.getHasMemberList() != null) {
 		    for (Subject member: group.getHasMemberList()) {
-		    	String memberDn = constructDn(member.getValue());
+		    	String memberValue = member.getValue();
+		    	if (memberValue == null || memberValue.length() == 0) {
+	    			throw new InvalidRequest("2542", "Group member cannot be blank");
+		    	}
+		    	String memberDn = constructDn(memberValue);
 		    	// check if they are trying to add a group as a member
 		    	boolean memberIsGroup = false;
 		    	try {
