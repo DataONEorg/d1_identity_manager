@@ -48,6 +48,7 @@ import java.io.InputStream;
 import java.io.ByteArrayInputStream;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
+import org.dataone.client.auth.CertificateManager;
 import org.dataone.cn.ldap.NodeAccess;
 import org.dataone.service.util.TypeMarshaller;
 /**
@@ -1232,13 +1233,17 @@ public class CNIdentityLDAPImplTest {
                     testCNNode.setIdentifier(cnNodeReference);
                     nodeAccess.setNodeApproved(cnNodeReference, Boolean.TRUE);
 
-			Subject p1 = new Subject();
+                    	Subject p1 = new Subject();
 			p1.setValue(primarySubject);
 			Person person1 = new Person();
 			person1.setSubject(p1);
 			person1.setFamilyName("test1");
 			person1.addGivenName("test1");
 			person1.addEmail("test1@dataone.org");
+                    
+			Subject certP1 = new Subject();
+                        String standardizedPrimarySubject = CertificateManager.getInstance().standardizeDN(primarySubject);
+			certP1.setValue(standardizedPrimarySubject);
 
 			Subject p2 = new Subject();
 			p2.setValue(secondarySubject);
@@ -1283,7 +1288,7 @@ public class CNIdentityLDAPImplTest {
 			assertTrue(check);
 
                         // find out if this will fail due to recursive bug?
-                        SubjectInfo subjectInfo = identityService.getSubjectInfo(getSession(p1), p1);
+                        SubjectInfo subjectInfo = identityService.getSubjectInfo(getSession(certP1), certP1);
 			assertNotNull(subjectInfo);
 
                         
