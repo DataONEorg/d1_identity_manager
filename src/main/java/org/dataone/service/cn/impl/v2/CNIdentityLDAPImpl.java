@@ -1184,11 +1184,11 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 						if (attributeName.equalsIgnoreCase("equivalentIdentityRequest")) {
 							items = (NamingEnumeration<String>) attribute.getAll();
 							while (items.hasMore()) {
-								attributeValue = items.next();
+								attributeValue = items.next();						
 								
-								
-								// try to look it up
-								Subject equivalentIdentityRequest = new Subject();
+
+                                                                // try to look it up
+								Subject equivalentIdentityRequest = new Subject();                                                                                                                   
 								equivalentIdentityRequest.setValue(attributeValue);
 								log.debug("Found attribute: " + attributeName + "=" + attributeValue);
 								
@@ -1237,11 +1237,27 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 							items = (NamingEnumeration<String>) attribute.getAll();
 							while (items.hasMore()) {
 								attributeValue = items.next();
-								log.debug("Found attribute: " + attributeName + "=" + attributeValue);
+                                                                String equivalentIdentityName = attributeValue;
+						                // The name passed in that is the subject's value
+                                                                // The equivalent identity should be treated in the 
+                                                                // same way as the named subject, meaning that 
+                                                                // the equivalent identity should be standardized as
+                                                                // well (otherwise infinite recursion and StackOverflow)
+                                                                
+                                                                // convert to use the standardized string representation
+                                                                try {
+                                                                   equivalentIdentityName = CertificateManager.getInstance().standardizeDN(equivalentIdentityName);
+                                                                } catch (IllegalArgumentException ex) {
+                                                                // non-DNs are acceptable
+                                                                }	
+                                                               
+					
+								log.debug("Found attribute: " + attributeName + "=" + equivalentIdentityName);
+
 								Subject equivalentIdentity = new Subject();
 								
 								// add as equivalent
-								equivalentIdentity.setValue(attributeValue);
+								equivalentIdentity.setValue(equivalentIdentityName);
 								person.addEquivalentIdentity(equivalentIdentity);
 								
 								// add this identity to the subject list

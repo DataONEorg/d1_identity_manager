@@ -48,6 +48,7 @@ import java.io.InputStream;
 import java.io.ByteArrayInputStream;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
+import org.dataone.client.auth.CertificateManager;
 import org.dataone.cn.ldap.NodeAccess;
 import org.dataone.service.util.TypeMarshaller;
 /**
@@ -71,7 +72,9 @@ public class CNIdentityLDAPImplTest {
 	private String groupNameNonDn = Settings.getConfiguration().getString("test.nonDnGroup.name");
 	private String cnAdmin = "CN=l0c1Test,DC=dataone,DC=org";
 
-
+	private String primarySubjectNonStandard = Settings.getConfiguration().getString("test.primarySubject.nonStandard");
+	private String secondarySubjectNonStandard = Settings.getConfiguration().getString("test.secondarySubject.nonStandard");
+        
         NodeAccess nodeAccess = new NodeAccess();
         final static int SIZE = 16384;
         
@@ -1202,6 +1205,14 @@ public class CNIdentityLDAPImplTest {
 		}
 	
 	}
+        /*
+         * When there are two identities with nonstandard DNs (that could be standardized) in LDAP 
+         * that were equivalent, if a Standardized DN of an identity is 
+         * passed into the getSubjectInfo via Session and Subject (as would appear in a cert)
+         * then  getSubjectInfo would create a StackOverflow exception because of
+         * infinite recursion
+         * See https://redmine.dataone.org/issues/7604
+         */
 	@Test
 	public void getSubjectInfoIdentityTwoWay()  throws Exception  {
             NodeRegistryService nodeRegistryService = new NodeRegistryService();
@@ -1232,16 +1243,20 @@ public class CNIdentityLDAPImplTest {
                     testCNNode.setIdentifier(cnNodeReference);
                     nodeAccess.setNodeApproved(cnNodeReference, Boolean.TRUE);
 
-			Subject p1 = new Subject();
-			p1.setValue(primarySubject);
+                    	Subject p1 = new Subject();
+			p1.setValue(primarySubjectNonStandard);
 			Person person1 = new Person();
 			person1.setSubject(p1);
 			person1.setFamilyName("test1");
 			person1.addGivenName("test1");
 			person1.addEmail("test1@dataone.org");
+                    
+			Subject certP1 = new Subject();
+                        String standardizedPrimarySubject = CertificateManager.getInstance().standardizeDN(primarySubject);
+			certP1.setValue(standardizedPrimarySubject);
 
 			Subject p2 = new Subject();
-			p2.setValue(secondarySubject);
+			p2.setValue(secondarySubjectNonStandard);
 			Person person2 = new Person();
 			person2.setSubject(p2);
 			person2.setFamilyName("test2");
@@ -1283,7 +1298,7 @@ public class CNIdentityLDAPImplTest {
 			assertTrue(check);
 
                         // find out if this will fail due to recursive bug?
-                        SubjectInfo subjectInfo = identityService.getSubjectInfo(getSession(p1), p1);
+                        SubjectInfo subjectInfo = identityService.getSubjectInfo(getSession(certP1), certP1);
 			assertNotNull(subjectInfo);
 
                         
