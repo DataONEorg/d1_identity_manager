@@ -201,6 +201,83 @@ public class CNIdentityLDAPImplTest {
 		}
 
     }
+	
+    @Test
+    public void editGroupMissingMember()  {
+
+    	try {
+			Subject p1 = new Subject();
+			p1.setValue(primarySubject);
+			Person person1 = new Person();
+			person1.setSubject(p1);
+			person1.setFamilyName("test1");
+			person1.addGivenName("test1");
+			person1.addEmail("test1@dataone.org");
+
+			Subject p2 = new Subject();
+			p2.setValue(secondarySubject);
+			Person person2 = new Person();
+			person2.setSubject(p2);
+			person2.setFamilyName("test2");
+			person2.addGivenName("test2");
+			person2.addEmail("test2@dataone.org");
+
+			Subject groupSubject = new Subject();
+			groupSubject.setValue(groupName);
+			
+			Group group = new Group();
+			group.setGroupName(groupName);
+			group.setSubject(groupSubject);
+			
+			Subject secondaryGroupSubject = new Subject();
+			secondaryGroupSubject.setValue(secondaryGroupName);
+			
+			Group secondaryGroup = new Group();
+			secondaryGroup.setGroupName(secondaryGroupName);
+			secondaryGroup.setSubject(secondaryGroupSubject);
+
+			// only add the secondary person because p1 is owner (member by default)
+			SubjectList members = new SubjectList();
+			//members.addPerson(person1);
+			members.addSubject(person2.getSubject());
+
+			CNIdentityLDAPImpl identityService = new CNIdentityLDAPImpl();
+//			identityService.setServer(server);
+			boolean check = false;
+
+			// create only 1 subject
+			Subject subject = identityService.registerAccount(getSession(p1), person1);
+			assertNotNull(subject);
+
+			// group
+			Subject retGroup = null;
+			retGroup = identityService.createGroup(getSession(p1), group);
+			assertNotNull(retGroup);
+			// add members
+			group.setHasMemberList(members.getSubjectList());
+			check = identityService.updateGroup(getSession(p1), group);
+			assertTrue(check);
+			
+			// check that we can retrieve the group
+			SubjectInfo subjects = identityService.listSubjects(null, null, null, null, null);
+			assertNotNull(subjects);
+			SubjectInfo existingGroup = identityService.getSubjectInfo(null, groupSubject);
+			assertNotNull(existingGroup);
+			assertTrue(existingGroup.getGroup(0).getHasMemberList().contains(secondarySubject));
+
+			// clean up (this is not required for service to be functioning)
+			check = identityService.removeSubject(p1);
+			assertTrue(check);
+			check = identityService.removeSubject(groupSubject);
+			assertTrue(check);
+			
+
+		} catch (Exception e) {
+			e.printStackTrace();
+			fail();
+		}
+
+    }
 
     @Test
     public void editGroup()  {
