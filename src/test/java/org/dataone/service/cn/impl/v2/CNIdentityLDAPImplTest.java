@@ -254,9 +254,9 @@ public class CNIdentityLDAPImplTest {
 			retGroup = identityService.createGroup(getSession(p1), group);
 			assertNotNull(retGroup);
 			// add members
-			group.setHasMemberList(members.getSubjectList());
-			check = identityService.updateGroup(getSession(p1), group);
-			assertTrue(check);
+//			group.setHasMemberList(members.getSubjectList());
+//			check = identityService.updateGroup(getSession(p1), group);
+//			assertTrue(check);
 			
 			// check that we can retrieve the group
 			SubjectInfo subjects = identityService.listSubjects(null, null, null, null, null);
