@@ -252,11 +252,11 @@ public class CNIdentityLDAPImplTest {
 			assertTrue(check);
 			
 			// check that we can retrieve the group
-//			SubjectInfo subjects = identityService.listSubjects(null, null, null, null, null);
-//			assertNotNull(subjects);
-			SubjectInfo existingGroup = identityService.getSubjectInfo(null, groupSubject);
+			SubjectInfo subjects = identityService.listSubjects(null, null, null, null, null);
+			assertNotNull(subjects);
+			SubjectInfo existingGroup = identityService.getSubjectInfo(getSession(p1), groupSubject);
 			assertNotNull(existingGroup);
-			//assertTrue(existingGroup.getGroup(0).getHasMemberList().contains(secondarySubject));
+			assertTrue(existingGroup.getGroup(0).getHasMemberList().contains(secondarySubject));
 
 			// clean up (this is not required for service to be functioning)
 			check = identityService.removeSubject(p1);
