@@ -228,13 +228,6 @@ public class CNIdentityLDAPImplTest {
 			Group group = new Group();
 			group.setGroupName(groupName);
 			group.setSubject(groupSubject);
-			
-			Subject secondaryGroupSubject = new Subject();
-			secondaryGroupSubject.setValue(secondaryGroupName);
-			
-			Group secondaryGroup = new Group();
-			secondaryGroup.setGroupName(secondaryGroupName);
-			secondaryGroup.setSubject(secondaryGroupSubject);
 
 			// only add the secondary person because p1 is owner (member by default)
 			SubjectList members = new SubjectList();
@@ -254,13 +247,13 @@ public class CNIdentityLDAPImplTest {
 			retGroup = identityService.createGroup(getSession(p1), group);
 			assertNotNull(retGroup);
 			// add members
-//			group.setHasMemberList(members.getSubjectList());
-//			check = identityService.updateGroup(getSession(p1), group);
-//			assertTrue(check);
+			group.setHasMemberList(members.getSubjectList());
+			check = identityService.updateGroup(getSession(p1), group);
+			assertTrue(check);
 			
 			// check that we can retrieve the group
-			SubjectInfo subjects = identityService.listSubjects(null, null, null, null, null);
-			assertNotNull(subjects);
+//			SubjectInfo subjects = identityService.listSubjects(null, null, null, null, null);
+//			assertNotNull(subjects);
 			SubjectInfo existingGroup = identityService.getSubjectInfo(null, groupSubject);
 			assertNotNull(existingGroup);
 			//assertTrue(existingGroup.getGroup(0).getHasMemberList().contains(secondarySubject));
