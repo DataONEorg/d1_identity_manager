@@ -1102,7 +1102,14 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 							// look up details for this Group member?
 							if (recurse) {
 								// only one level of recursion for groups
-								SubjectInfo groupInfo = this.getSubjectInfo(null, member, false, visitedSubjects);
+								SubjectInfo groupInfo = null;
+								try {
+									groupInfo = this.getSubjectInfo(null, member, false, visitedSubjects);
+								} catch (NotFound nf) {
+									log.warn("could not find member DN: " + subjectId);
+									continue;
+								}
+								
 								// has people as members?
 								if (groupInfo.getPersonList() != null) {
 									for (Person p: groupInfo.getPersonList()) {
