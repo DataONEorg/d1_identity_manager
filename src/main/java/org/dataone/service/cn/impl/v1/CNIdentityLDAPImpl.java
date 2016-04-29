@@ -60,14 +60,7 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 	public CNIdentityLDAPImpl() {
 		this.impl = new org.dataone.service.cn.impl.v2.CNIdentityLDAPImpl();
 	}
-	
-	public void setServer(String server) {
-		impl.setServer(server);
-	}
-	
-	public String getServer() {
-        return impl.getServer();
-    }
+	        
 	
     public void setBase(String base) {
         impl.setBase(base);
@@ -77,13 +70,6 @@ public class CNIdentityLDAPImpl implements CNIdentity {
         return impl.getBase();
     }
     
-    public boolean checkAttribute(String dn, String attributeName, String attributeValue) {
-    	return impl.checkAttribute(dn, attributeName, attributeValue);
-    }
-    
-    public boolean removeEntry(String dn) {
-    	return impl.removeEntry(dn);
-    }
         
     @Override    
 	public Subject createGroup(Session session, Group group) throws ServiceFailure,
@@ -159,10 +145,6 @@ public class CNIdentityLDAPImpl implements CNIdentity {
 		return impl.listSubjects(session, query, status, start, count);
 	}
 	
-
-	public boolean removeSubject(Subject p) {
-		return impl.removeSubject(p);
-	}
 	
 	@Override
 	public boolean denyMapIdentity(Session session, Subject secondarySubject)
