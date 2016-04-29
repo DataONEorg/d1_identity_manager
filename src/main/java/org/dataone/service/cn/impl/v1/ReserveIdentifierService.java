@@ -58,31 +58,8 @@ public class ReserveIdentifierService {
 	    impl.setBase(base);
 	}
 	
-	public String getServer() {
-	    return impl.getServer();
-	}
 	
-	public void setServer(String server) {
-	    impl.setServer(server);
-	}
-	
-	public String getAdmin() {
-        return impl.getAdmin();
-    }
-
-    public void setAdmin(String admin) {
-        impl.setAdmin(admin);
-    }
-    
-    public String getPassword() {
-        return impl.getPassword();
-    }
-
-    public void setPassword(String password) {
-        impl.setPassword(password);
-    }
-	
-	public void expireEntries(int numberOfDays) throws NamingException {
+	public void expireEntries(int numberOfDays) throws NamingException, ServiceFailure {
 		impl.expireEntries(numberOfDays);
 	}
 	

@@ -9,6 +9,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <d1_libclient_java.version>2.2.0-SNAPSHOT</d1_libclient_java.version>
         <d1_cn_noderegistry.version>2.2.0-SNAPSHOT</d1_cn_noderegistry.version>
+        <d1_test_resources.version>2.2.0-SNAPSHOT</d1_test_resources.version>
     </properties>
     <repositories>
         <repository>
@@ -51,6 +52,13 @@
             <artifactId>d1_cn_noderegistry</artifactId>
             <version>${d1_cn_noderegistry.version}</version>
             <type>jar</type>
+        </dependency>
+        <dependency>
+            <groupId>org.dataone</groupId>
+            <artifactId>d1_test_resources</artifactId>
+            <version>${d1_test_resources.version}</version>
+            <type>jar</type>
+            <scope>test</scope>
         </dependency>
     </dependencies>
     <build>

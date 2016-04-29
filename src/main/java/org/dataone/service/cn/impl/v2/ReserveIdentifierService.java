@@ -47,6 +47,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.dataone.client.v2.itk.D1Client;
 import org.dataone.cn.hazelcast.HazelcastClientFactory;
+import org.dataone.cn.ldap.DirContextProvider;
 import org.dataone.cn.ldap.LDAPService;
 import org.dataone.configuration.Settings;
 import org.dataone.service.exceptions.BaseException;
@@ -81,7 +82,7 @@ public class ReserveIdentifierService extends LDAPService {
 	private static Timer timer = null;
 	
 	private static CNIdentityLDAPImpl identityService = null;
-
+        private static DirContextProvider dirContextProvider = DirContextProvider.getInstance();
 	
 	private static final String UUID_ID = "UUID";
 	private static final String DOI = "DOI";
@@ -95,10 +96,7 @@ public class ReserveIdentifierService extends LDAPService {
 		identityService = new CNIdentityLDAPImpl();
 	}
 	
-	@Override
-	public void setBase(String base) {
-	    this.base = base;
-	}
+
 	
 	/**
 	 * Reserves the given Identifier for the Subject in the Session
@@ -160,26 +158,38 @@ public class ReserveIdentifierService extends LDAPService {
 			throw new IdentifierNotUnique("4210", "The given sid is already in use: " + pid.getValue());
 		}
 		*/
+        DirContext dirContext = null;
+        try {
+            dirContext = dirContextProvider.borrowDirContext();
+        } catch (Exception ex) {
+            log.error(ex.getMessage(), ex);
+            throw new ServiceFailure("2490", ex.getMessage());
+        }
+        if (dirContext == null) {
+            throw new ServiceFailure("2490", "Context is null. Unable to retrieve LDAP Directory Context from pool. Please try again.");
+        }
+        try {
+            // look up the identifier before attempting to add it
+            String dn = lookupDN(dirContext, pid);
+            if (dn != null) {
+                // check that it is ours since it exists
+                ownedBySubject = checkAttribute(dirContext, dn, "subject", subject.getValue());
+                if (!ownedBySubject) {
+                    String msg = "Identifier (" + pid.getValue() + ") is reserved and not owned by subject, " + subject.getValue();
+                    log.warn(msg);
+                    throw new NotAuthorized("4180", msg);
+                }
+                // still, it's already reserved
+                String msg = "The given pid: " + pid.getValue() + " has already been reserved by: " + subject.getValue();
+                throw new IdentifierNotUnique("4210", msg);
 
-		// look up the identifier before attempting to add it
-		String dn = lookupDN(pid);
-		if (dn != null) {
-			// check that it is ours since it exists
-			ownedBySubject = checkAttribute(dn, "subject", subject.getValue());
-			if (!ownedBySubject) {
-				String msg = "Identifier (" + pid.getValue() + ") is reserved and not owned by subject, " + subject.getValue();
-				log.warn(msg);
-				throw new NotAuthorized("4180", msg);
-			}
-			// still, it's already reserved
-			String msg = "The given pid: " + pid.getValue() + " has already been reserved by: " + subject.getValue();
-			throw new IdentifierNotUnique("4210", msg);
+            }
 
-		}
-
-		// add an entry for the subject and pid
-		boolean result = addEntry(subject, pid);
-
+            // add an entry for the subject and pid
+            boolean result = addEntry(dirContext, subject, pid);
+        } finally {
+            dirContextProvider.returnDirContext(dirContext);
+        }
 		return pid;
 	}
 
@@ -260,13 +270,27 @@ public class ReserveIdentifierService extends LDAPService {
 
 		Subject subject = session.getSubject();
 		// check that we have the reservation
-		if (hasReservation(session, subject, pid)) {
-			// look up the dn to remove it
-			String dn = lookupDN(pid);
-			if (dn != null) {
-				boolean result = removeEntry(dn);
-				return result;
-			}
+        if (hasReservation(session, subject, pid)) {
+            DirContext dirContext = null;
+            try {
+                dirContext = dirContextProvider.borrowDirContext();
+            } catch (Exception ex) {
+                log.error(ex.getMessage(), ex);
+                throw new ServiceFailure("2490", ex.getMessage());
+            }
+            if (dirContext == null) {
+                throw new ServiceFailure("2490", "Context is null. Unable to retrieve LDAP Directory Context from pool. Please try again.");
+            }
+            try {
+                // look up the dn to remove it
+                String dn = lookupDN(dirContext, pid);
+                if (dn != null) {
+                    boolean result = removeEntry(dirContext, dn);
+                    return result;
+                }
+            } finally {
+                dirContextProvider.returnDirContext(dirContext);
+            }
 		}
 
 		return false;
@@ -328,27 +352,39 @@ public class ReserveIdentifierService extends LDAPService {
 			subjects.add(subject);
 		}
 		boolean ownedBySubject = false;
-
-		// look up the identifier
-		String dn = lookupDN(pid);
-		log.debug("Looked up DN");
-		if (dn == null) {
-			String msg = "No reservation found for pid: " + pid.getValue();
-			throw new NotFound("4923", msg);
-		} else {
-			// check that it is ours since it exists
-			for (Subject s: subjects) {
-				ownedBySubject = checkAttribute(dn, "subject", s.getValue());
-				if (ownedBySubject) {
-					break;
-				}
-			}
-			if (!ownedBySubject) {
-				String msg = "Reserved Identifier (" + pid.getValue() + ") is not owned by given subject[s]";
-				throw new NotAuthorized("4924", msg);
-			}
-		}
-
+        DirContext dirContext = null;
+        try {
+            dirContext = dirContextProvider.borrowDirContext();
+        } catch (Exception ex) {
+            log.error(ex.getMessage(), ex);
+            throw new ServiceFailure("4921", ex.getMessage());
+        }
+        if (dirContext == null) {
+            throw new ServiceFailure("4921", "Context is null. Unable to retrieve LDAP Directory Context from pool. Please try again.");
+        }
+        try {
+    // look up the identifier
+            String dn = lookupDN(dirContext, pid);
+            log.debug("Looked up DN");
+            if (dn == null) {
+                String msg = "No reservation found for pid: " + pid.getValue();
+                throw new NotFound("4923", msg);
+            } else {
+                // check that it is ours since it exists
+                for (Subject s: subjects) {
+                    ownedBySubject = checkAttribute(dirContext, dn, "subject", s.getValue());
+                    if (ownedBySubject) {
+                        break;
+                    }
+                }
+                if (!ownedBySubject) {
+                    String msg = "Reserved Identifier (" + pid.getValue() + ") is not owned by given subject[s]";
+                    throw new NotAuthorized("4924", msg);
+                }
+            }
+        } finally {
+            dirContextProvider.returnDirContext(dirContext);
+        }
 		// we got this far, it is ours
 		return true;
 	}
@@ -360,7 +396,7 @@ public class ReserveIdentifierService extends LDAPService {
 	 * @return
 	 * @throws IdentifierNotUnique
 	 */
-	private boolean addEntry(Subject subject, Identifier pid) throws IdentifierNotUnique {
+	private boolean addEntry(DirContext dirContext, Subject subject, Identifier pid) throws IdentifierNotUnique {
 		// Values we'll use in creating the entry
 	    Attribute objClasses = new BasicAttribute("objectclass");
 	    //objClasses.add("top");
@@ -369,7 +405,7 @@ public class ReserveIdentifierService extends LDAPService {
 	    // construct a DN from time
 	    Calendar now = Calendar.getInstance();
 	    String reservationId = "reservedIdentifier." + now.getTimeInMillis();
-	    String dn = "reservationId=" + reservationId + "," + base;
+	    String dn = "reservationId=" + reservationId + "," + this.getBase();
 	    String created = dateFormat.format(now.getTime());
 
 	    Attribute idAttribute = new BasicAttribute("reservationId", reservationId);
@@ -378,7 +414,6 @@ public class ReserveIdentifierService extends LDAPService {
 	    Attribute createdAttribute = new BasicAttribute("created", created);
 
 	    try {
-		    DirContext ctx = getContext();
 	        Attributes orig = new BasicAttributes();
 	        orig.put(objClasses);
 	        orig.put(idAttribute);
@@ -387,7 +422,7 @@ public class ReserveIdentifierService extends LDAPService {
 	        orig.put(createdAttribute);
 
 	        // Add the entry
-	        ctx.createSubcontext(dn, orig);
+	        dirContext.createSubcontext(dn, orig);
 	        log.debug( "Added entry " + dn);
 	    } catch (NameAlreadyBoundException e) {
 	        // If entry exists already, fine.  Ignore this error.
@@ -408,30 +443,44 @@ public class ReserveIdentifierService extends LDAPService {
 	 * @param numberOfDays
 	 * @throws NamingException
 	 */
-	public void expireEntries(int numberOfDays) throws NamingException {
-		List<Identifier> identifiers = lookupReservedIdentifiers();
-		for (Identifier pid: identifiers) {
-			// get the DN
-			String dn = lookupDN(pid);
-			// get the created attribute
-			String createdObj = (String) getAttributeValues(dn, "created").get(0);
-			//Date created = DatatypeConverter.parseDateTime(createdObj).getTime();
-			Date created = null;
-			try {
-				created = dateFormat.parse(createdObj);
-			} catch (ParseException e) {
-				log.error("(skipping) Could not parse created date for entry: " + dn, e);
-				continue;
-			}
+	public void expireEntries(int numberOfDays) throws NamingException, ServiceFailure {
+        DirContext dirContext = null;
+        try {
+            dirContext = dirContextProvider.borrowDirContext();
+        } catch (Exception ex) {
+            log.error(ex.getMessage(), ex);
+            throw new ServiceFailure("4921", ex.getMessage());
+        }
+        if (dirContext == null) {
+            throw new ServiceFailure("4921", "Context is null. Unable to retrieve LDAP Directory Context from pool. Please try again.");
+        }
+        try {
+            List<Identifier> identifiers = lookupReservedIdentifiers(dirContext);
+            for (Identifier pid: identifiers) {
+                // get the DN
+                String dn = lookupDN(dirContext, pid);
+                // get the created attribute
+                String createdObj = (String) getAttributeValues(dirContext, dn, "created").get(0);
+                //Date created = DatatypeConverter.parseDateTime(createdObj).getTime();
+                Date created = null;
+                try {
+                    created = dateFormat.parse(createdObj);
+                } catch (ParseException e) {
+                    log.error("(skipping) Could not parse created date for entry: " + dn, e);
+                    continue;
+                }
 
-			Calendar expires = Calendar.getInstance();
-			expires.setTime(created);
-			expires.add(Calendar.DATE, numberOfDays);
-			Calendar today = Calendar.getInstance();
-			if (expires.before(today)) {
-				removeEntry(dn);
-			}
-		}
+                Calendar expires = Calendar.getInstance();
+                expires.setTime(created);
+                expires.add(Calendar.DATE, numberOfDays);
+                Calendar today = Calendar.getInstance();
+                if (expires.before(today)) {
+                    removeEntry(dirContext, dn);
+                }
+            }
+        } finally {
+            dirContextProvider.returnDirContext(dirContext);
+        }
 
 	}
 
@@ -455,9 +504,9 @@ public class ReserveIdentifierService extends LDAPService {
 				// expire day-old entries
 				try {
 					service.expireEntries(1);
-				} catch (NamingException e) {
+				} catch (NamingException | ServiceFailure e) {
 					// TODO Auto-generated catch block
-					e.printStackTrace();
+                    log.error(e.getMessage(), e);
 				}
 			}
 		};
@@ -470,12 +519,11 @@ public class ReserveIdentifierService extends LDAPService {
 	 * Find all the reserved Identifiers
 	 * @return list of previously reserved Identifiers
 	 */
-	private List<Identifier> lookupReservedIdentifiers() {
+	private List<Identifier> lookupReservedIdentifiers(DirContext dirContext) {
 
 		List<Identifier> identifiers = new ArrayList<Identifier>();
 
 		try {
-			DirContext ctx = getContext();
 			SearchControls ctls = new SearchControls();
 		    ctls.setSearchScope(SearchControls.SUBTREE_SCOPE);
 
@@ -483,7 +531,7 @@ public class ReserveIdentifierService extends LDAPService {
 		    String searchCriteria = "(objectClass=d1Reservation)";
 
 	        NamingEnumeration<SearchResult> results =
-	            ctx.search(base, searchCriteria, ctls);
+	            dirContext.search(getBase(), searchCriteria, ctls);
 
 	        while (results != null && results.hasMore()) {
 	            SearchResult si = results.next();
@@ -514,12 +562,11 @@ public class ReserveIdentifierService extends LDAPService {
 	 * @param pid
 	 * @return the DN in LDAP for the given pid
 	 */
-    private String lookupDN(Identifier pid) {
+    private String lookupDN(DirContext dirContext, Identifier pid) {
 
         String dn = null;
 
         try {
-            DirContext ctx = getContext();
             SearchControls ctls = new SearchControls();
             ctls.setSearchScope(SearchControls.SUBTREE_SCOPE);
             String escapedPid = pid.getValue();
@@ -540,7 +587,7 @@ public class ReserveIdentifierService extends LDAPService {
             String searchCriteria = "(&(objectClass=d1Reservation)(identifier=" + escapedPid + "))";
 
             NamingEnumeration<SearchResult> results =
-                    ctx.search(base, searchCriteria, ctls);
+                    dirContext.search(getBase(), searchCriteria, ctls);
 
             while (results != null && results.hasMore()) {
                 SearchResult si = results.next();
@@ -556,6 +603,7 @@ public class ReserveIdentifierService extends LDAPService {
                     if (attributeName.equalsIgnoreCase("identifier")) {
                         String attributeValue = (String) attribute.get();
                         if (pid.getValue().equals(attributeValue)) {
+                            results.close();
                             return dn;
                         }
                     }
