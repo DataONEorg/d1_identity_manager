@@ -1,0 +1,141 @@
+dn: cn=urn:node:IdentityTestCN,dc=dataone,dc=org
+cn: urn:node:IdentityTestCN
+d1NodeId: urn:node:IdentityTestCN
+d1NodeName: cn-dev
+d1NodeDescription: Mock test of a cn
+d1NodeBaseURL: https://cn-mock.nowhere.dataone.org/cn
+d1NodeReplicate: FALSE
+d1NodeSynchronize: FALSE
+d1NodeState: up
+d1NodeType: cn
+d1NodeApproved: TRUE
+subject: cn=urn:node:IdentityTestCN,dc=dataone,dc=org
+d1NodeContactSubject: CN=Benjamin Leinfelder A515,O=University of Chicago,C=US,DC=cilogon,DC=org
+objectclass: device
+objectclass: d1Node
+
+dn: d1NodeServiceId=CNCore-v1,cn=urn:node:IdentityTestCN,dc=dataone,dc=org
+d1NodeServiceId: CNCore-v1
+d1NodeId: urn:node:IdentityTestCN
+d1NodeServiceName: CNCore
+d1NodeServiceVersion: v1
+d1NodeServiceAvailable: TRUE
+objectclass: d1NodeService
+
+dn: d1NodeServiceId=CNRead-v1,cn=urn:node:IdentityTestCN,dc=dataone,dc=org
+d1NodeServiceId: CNRead-v1
+d1NodeId: urn:node:IdentityTestCN
+d1NodeServiceName: CNRead
+d1NodeServiceVersion: v1
+d1NodeServiceAvailable: TRUE
+objectclass: d1NodeService
+
+dn: d1NodeServiceId=CNAuthorization-v1,cn=urn:node:IdentityTestCN,dc=dataone,dc=org
+d1NodeServiceId: CNAuthorization-v1
+d1NodeId: urn:node:IdentityTestCN
+d1NodeServiceName: CNAuthorization
+d1NodeServiceVersion: v1
+d1NodeServiceAvailable: TRUE
+objectclass: d1NodeService
+
+dn: d1NodeServiceId=CNIdentity-v1,cn=urn:node:IdentityTestCN,dc=dataone,dc=org
+d1NodeServiceId: CNIdentity-v1
+d1NodeId: urn:node:IdentityTestCN
+d1NodeServiceName: CNIdentity
+d1NodeServiceVersion: v1
+d1NodeServiceAvailable: TRUE
+objectclass: d1NodeService
+
+dn: d1NodeServiceId=CNReplication-v1,cn=urn:node:IdentityTestCN,dc=dataone,dc=org
+d1NodeServiceId: CNReplication-v1
+d1NodeId: urn:node:IdentityTestCN
+d1NodeServiceName: CNReplication
+d1NodeServiceVersion: v1
+d1NodeServiceAvailable: TRUE
+objectclass: d1NodeService
+
+dn: d1NodeServiceId=CNRegister-v1,cn=urn:node:IdentityTestCN,dc=dataone,dc=org
+d1NodeServiceId: CNRegister-v1
+d1NodeId: urn:node:IdentityTestCN
+d1NodeServiceName: CNRegister
+d1NodeServiceVersion: v1
+d1NodeServiceAvailable: TRUE
+objectclass: d1NodeService
+
+dn: d1NodeServiceId=CNCore-v2,cn=urn:node:IdentityTestCN,dc=dataone,dc=org
+d1NodeServiceId: CNCore-v2
+d1NodeId: urn:node:IdentityTestCN
+d1NodeServiceName: CNCore
+d1NodeServiceVersion: v2
+d1NodeServiceAvailable: TRUE
+objectclass: d1NodeService
+
+dn: d1NodeServiceId=CNRead-v2,cn=urn:node:IdentityTestCN,dc=dataone,dc=org
+d1NodeServiceId: CNRead-v2
+d1NodeId: urn:node:IdentityTestCN
+d1NodeServiceName: CNRead
+d1NodeServiceVersion: v2
+d1NodeServiceAvailable: TRUE
+objectclass: d1NodeService
+
+dn: d1NodeServiceId=CNAuthorization-v2,cn=urn:node:IdentityTestCN,dc=dataone,dc=org
+d1NodeServiceId: CNAuthorization-v2
+d1NodeId: urn:node:IdentityTestCN
+d1NodeServiceName: CNAuthorization
+d1NodeServiceVersion: v2
+d1NodeServiceAvailable: TRUE
+objectclass: d1NodeService
+
+dn: d1NodeServiceId=CNIdentity-v2,cn=urn:node:IdentityTestCN,dc=dataone,dc=org
+d1NodeServiceId: CNIdentity-v2
+d1NodeId: urn:node:IdentityTestCN
+d1NodeServiceName: CNIdentity
+d1NodeServiceVersion: v2
+d1NodeServiceAvailable: TRUE
+objectclass: d1NodeService
+
+dn: d1NodeServiceId=CNReplication-v2,cn=urn:node:IdentityTestCN,dc=dataone,dc=org
+d1NodeServiceId: CNReplication-v2
+d1NodeId: urn:node:IdentityTestCN
+d1NodeServiceName: CNReplication
+d1NodeServiceVersion: v2
+d1NodeServiceAvailable: TRUE
+objectclass: d1NodeService
+
+dn: d1NodeServiceId=CNRegister-v2,cn=urn:node:IdentityTestCN,dc=dataone,dc=org
+d1NodeServiceId: CNRegister-v2
+d1NodeId: urn:node:IdentityTestCN
+d1NodeServiceName: CNRegister
+d1NodeServiceVersion: v2
+d1NodeServiceAvailable: TRUE
+objectclass: d1NodeService
+
+dn: d1NodeServiceId=CNDiagnostic-v2,cn=urn:node:IdentityTestCN,dc=dataone,dc=org
+d1NodeServiceId: CNDiagnostic-v2
+d1NodeId: urn:node:IdentityTestCN
+d1NodeServiceName: CNDiagnostic
+d1NodeServiceVersion: v2
+d1NodeServiceAvailable: TRUE
+objectclass: d1NodeService
+
+dn: d1NodeServiceId=CNView-v2,cn=urn:node:IdentityTestCN,dc=dataone,dc=org
+d1NodeServiceId: CNView-v2
+d1NodeId: urn:node:IdentityTestCN
+d1NodeServiceName: CNView
+d1NodeServiceVersion: v2
+d1NodeServiceAvailable: TRUE
+objectclass: d1NodeService
+
+dn: d1ServiceMethodName=verifyAccount,d1NodeServiceId=CNIdentity-v2,cn=urn:node:IdentityTestCN,dc=dataone,dc=org
+d1NodeServiceId: CNIdentity-v2
+d1NodeId: urn:node:IdentityTestCN
+d1ServiceMethodName: verifyAccount
+d1AllowedSubject: CN=l0c1Test,DC=dataone,DC=org
+objectclass: d1ServiceMethodRestriction
+
+dn: d1ServiceMethodName=mapIdentity,d1NodeServiceId=CNIdentity-v2,cn=urn:node:IdentityTestCN,dc=dataone,dc=org
+d1NodeServiceId: CNIdentity-v2
+d1NodeId: urn:node:IdentityTestCN
+d1ServiceMethodName: mapIdentity
+d1AllowedSubject: CN=l0c1Test,DC=dataone,DC=org
+objectclass: d1ServiceMethodRestriction
