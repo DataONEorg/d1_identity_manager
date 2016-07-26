@@ -518,6 +518,105 @@ public class CNIdentityLDAPImplTestUnit {
     }
     
     @Test
+    public void editGroupMultipleOwners()  {
+
+		boolean check = false;
+		Subject p1 = new Subject();
+		Subject p2 = new Subject();
+		Subject groupSubject = new Subject();
+		CNIdentityLDAPImpl identityService = null;
+
+
+    	try {
+    		
+    		identityService = new CNIdentityLDAPImpl();
+
+			p1.setValue(primarySubject);
+			Person person1 = new Person();
+			person1.setSubject(p1);
+			person1.setFamilyName("test1");
+			person1.addGivenName("test1");
+			person1.addEmail("test1@dataone.org");
+
+			p2.setValue(orcidSubject);
+			Person person2 = new Person();
+			person2.setSubject(p2);
+			person2.setFamilyName("test2");
+			person2.addGivenName("test2");
+			person2.addEmail("test2@dataone.org");
+
+			groupSubject.setValue(groupName);
+			
+			Group group = new Group();
+			group.setGroupName(groupName);
+			group.setSubject(groupSubject);
+
+			// only add the secondary person because p1 is owner (member by default)
+			SubjectList members = new SubjectList();
+			//members.addPerson(person1);
+			members.addSubject(person2.getSubject());
+
+
+			// create subjects
+			Subject subject = identityService.registerAccount(getSession(p1), person1);
+			assertNotNull(subject);
+			subject = identityService.registerAccount(getSession(p2), person2);
+			assertNotNull(subject);
+
+			// group
+			Subject retGroup = null;
+			retGroup = identityService.createGroup(getSession(p1), group);
+			assertNotNull(retGroup);
+			
+			// add members
+			group.setHasMemberList(members.getSubjectList());
+			check = identityService.updateGroup(getSession(p1), group);
+			assertTrue(check);
+			
+			// try to modify the group as non-owner
+			group.setHasMemberList(null);
+			try {
+				check = identityService.updateGroup(getSession(p2), group);
+			} catch (NotAuthorized e) {
+				// expected result
+				check = false;
+			}
+			assertFalse(check);
+			
+			// add the secondary as another owner
+			group.addRightsHolder(p2);
+			check = identityService.updateGroup(getSession(p1), group);
+			assertTrue(check);
+			
+			// modify as secondary owner
+			group.setHasMemberList(null);
+			check = identityService.updateGroup(getSession(p2), group);
+			assertTrue(check);
+
+			
+
+		} catch (Exception e) {
+			e.printStackTrace();
+			fail(e.getMessage());
+		}
+    	finally {
+    		try {
+	    		// clean up (this is not required for service to be functioning)
+				check = ldapTestIdentityCleanup.removeSubject(p1);
+				assertTrue(check);
+				check = ldapTestIdentityCleanup.removeEntry(identityService.constructDn(p2.getValue()));
+				assertTrue(check);
+				check = ldapTestIdentityCleanup.removeSubject(groupSubject);
+				assertTrue(check);
+    		} catch (Exception e) {
+    			e.printStackTrace();
+    			fail();
+    		}
+    	}
+
+    }
+    
+    @Test
     public void editGroupOrcidReverse()  {
 
     	try {
