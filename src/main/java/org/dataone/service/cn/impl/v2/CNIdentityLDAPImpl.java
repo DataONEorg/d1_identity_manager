@@ -303,6 +303,8 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		// find the admin list of the group
 		List<Object> owners = this.getAttributeValues( dirContext, dn, "owner");
 	 
+		log.debug("owners.size=" + owners.size());
+
 		// do any of our subjects match the owners?
 		ownerSearch:
 		for (Subject user: sessionSubjects) {
@@ -312,18 +314,24 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 			} catch (IllegalArgumentException ex) {
 			// non-DNs are acceptable
 			}
+			log.debug("sessionSubject=" + sessionSubject);
 			for (Object ownerObj: owners) {
 				String owner = (String) ownerObj;
+				log.debug("1. owner=" + owner);
 				// either use the dn or look up the subject as housed in UID
-					List<Object> uids = this.getAttributeValues( dirContext, owner, "uid");
-					if (uids != null && uids.size() > 0) {
-						owner = uids.get(0).toString();
-					}
-					try {
-						owner = CertificateManager.getInstance().standardizeDN(owner);
-					} catch (IllegalArgumentException ex) {
-				// non-DNs are acceptable
-				}		
+				List<Object> uids = this.getAttributeValues( dirContext, owner, "uid");
+				if (uids != null && uids.size() > 0) {
+					owner = uids.get(0).toString();
+				}
+				log.debug("2. owner=" + owner);
+				try {
+					owner = CertificateManager.getInstance().standardizeDN(owner);
+				} catch (IllegalArgumentException ex) {
+					// non-DNs are acceptable
+				}
+				log.debug("3. owner=" + owner);
+
+				log.debug(sessionSubject + " == " + owner + " ?: " + sessionSubject.equals(owner));
 				if (sessionSubject.equals(owner)) {
 					canEdit = true;
 					break ownerSearch;
@@ -331,6 +339,8 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 			}
 		}
 		
+		log.debug("canEdit=" + canEdit);
+
 		// throw exception if not authorized
 		if (!canEdit) {
 			throw new NotAuthorized("2560", "Subject not in owner list for group");
