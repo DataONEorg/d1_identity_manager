@@ -330,7 +330,7 @@ public class ReserveIdentifierService extends LDAPService {
 		try {
 			subjectInfo = identityService.getSubjectInfo(session, subject);
 		} catch (Exception e) {
-			log.warn("Could not look up SubjectInfo for: " + subject);
+			log.warn("Could not look up SubjectInfo for: " + subject.getValue());
 		}
 		log.debug("SubjectInfo retrieved");
 		List<Subject> subjects = new ArrayList<Subject>();
