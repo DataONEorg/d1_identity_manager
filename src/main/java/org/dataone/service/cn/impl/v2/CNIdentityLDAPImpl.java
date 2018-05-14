@@ -22,7 +22,6 @@
 
 package org.dataone.service.cn.impl.v2;
 
-import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -41,16 +40,16 @@ import javax.naming.directory.ModificationItem;
 import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
 import javax.naming.ldap.LdapName;
-import javax.naming.ldap.Rdn;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.dataone.client.v2.itk.D1Client;
 import org.dataone.client.auth.CertificateManager;
+import org.dataone.client.v2.itk.D1Client;
 import org.dataone.cn.ldap.DirContextProvider;
 import org.dataone.cn.ldap.LDAPService;
 import org.dataone.configuration.Settings;
 import org.dataone.service.cn.v2.CNIdentity;
+import org.dataone.service.cn.v2.impl.NodeRegistryServiceImpl;
 import org.dataone.service.exceptions.IdentifierNotUnique;
 import org.dataone.service.exceptions.InvalidCredentials;
 import org.dataone.service.exceptions.InvalidRequest;
@@ -60,15 +59,14 @@ import org.dataone.service.exceptions.NotFound;
 import org.dataone.service.exceptions.NotImplemented;
 import org.dataone.service.exceptions.ServiceFailure;
 import org.dataone.service.types.v1.Group;
-import org.dataone.service.types.v2.Node;
 import org.dataone.service.types.v1.NodeType;
 import org.dataone.service.types.v1.Person;
 import org.dataone.service.types.v1.Session;
 import org.dataone.service.types.v1.Subject;
 import org.dataone.service.types.v1.SubjectInfo;
-import org.dataone.service.cn.v2.impl.NodeRegistryServiceImpl;
-import org.dataone.service.types.v2.NodeList;
 import org.dataone.service.types.v1.util.AuthUtils;
+import org.dataone.service.types.v2.Node;
+import org.dataone.service.types.v2.NodeList;
 import org.dataone.service.types.v2.util.ServiceMethodRestrictionUtil;
 
 /**
@@ -930,16 +928,19 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		// check redaction policy
 		boolean redact = shouldRedact(session);
 		if (redact) {
-			if (session != null) {
-				log.debug("subjectInfo requested for: '" + subject.getValue() + "'");
-				log.debug("checking if redaction holds for the calling user: '" + session.getSubject().getValue() + "'");
-			} else {
-				log.debug("session is null, we will redact email");
-			}
+		    if (log.isDebugEnabled()) {
+		        if (session != null) {
+		            log.debug("subjectInfo requested for: '" + subject.getValue() + "'");
+		            log.debug("checking if redaction holds for the calling user: '" + session.getSubject().getValue() + "'");
+		        } else {
+		            log.debug("session is null, we will redact email");
+		        }
+		    }
 			
 			//if we are looking up our own info then don't redact
 			if (session != null && session.getSubject().equals(subject)) {
-				log.debug("subject MATCH. lifting redaction for the calling user: '" + session.getSubject().getValue() + "'");
+				if (log.isDebugEnabled())
+				    log.debug("subject MATCH. lifting redaction for the calling user: '" + session.getSubject().getValue() + "'");
 				redact = false;
 			}
 		}
@@ -953,13 +954,14 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		try {
 			Attributes attributes = dirContext.getAttributes(new LdapName(dn));
 			subjectInfo = processAttributes(dirContext, dn, attributes, recurse, false, redact, visitedSubjects);
-			log.debug("Retrieved SubjectList for: " + dn);
+			if (log.isDebugEnabled())
+			    log.debug("Retrieved SubjectList for: " + dn);
 		} catch (NameNotFoundException ex) {
 		    log.warn("Could not find: " + dn + " : in Ldap: " + ex.getMessage());
 		    throw new NotFound("4564", ex.getMessage());
 		} catch (Exception e) {
 			String msg = "Problem looking up entry: " + dn + " : " + e.getMessage();
-		log.error(msg, e);
+			log.error(msg, e);
 			throw new ServiceFailure("4561", msg);
 		}
 
@@ -1163,316 +1165,322 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 			visitedSubjects.add(name);
 		}
 
-		if (attributes != null) {
-			NamingEnumeration<String> objectClasses = (NamingEnumeration<String>) attributes.get("objectClass").getAll();
-			boolean isGroup = true;
-			while (objectClasses.hasMore()) {
-				String objectClass = objectClasses.next();
-				if (objectClass.equalsIgnoreCase("d1Principal")) {
-					isGroup = false;
-					break;
-				}
-			}
+		if (attributes == null) {
+		    return pList;
+		}
+		
+		// deal with any attributes below...
+		
+		NamingEnumeration<String> objectClasses = (NamingEnumeration<String>) attributes.get("objectClass").getAll();
+		boolean isGroup = true;
+		while (objectClasses.hasMore()) {
+		    String objectClass = objectClasses.next();
+		    if (objectClass.equalsIgnoreCase("d1Principal")) {
+		        isGroup = false;
+		        break;
+		    }
+		}
 
-			// get all attributes for processing
-			NamingEnumeration<? extends Attribute> values = attributes.getAll();
-			// for handling multi-item attributes
-			NamingEnumeration<String> items = null;
+		// get all attributes for processing
+		NamingEnumeration<? extends Attribute> values = attributes.getAll();
+		// for handling multi-item attributes
+		NamingEnumeration<String> items = null;
 
-			// process as Group
-			if (isGroup) {
-				Group group = new Group();
-				Subject subject = new Subject();
-				subject.setValue(name);
-				group.setSubject(subject);
+		// process as Group
+		if (isGroup) {
+		    Group group = new Group();
+		    Subject subject = new Subject();
+		    subject.setValue(name);
+		    group.setSubject(subject);
 
-				while (values.hasMore()) {
-					Attribute attribute = values.next();
-					String attributeName = attribute.getID();
-					String attributeValue = null;
+		    while (values.hasMore()) {
+		        Attribute attribute = values.next();
+		        String attributeName = attribute.getID();
+		        String attributeValue = null;
 
-					if (attributeName.equalsIgnoreCase("uid")) {
-						attributeValue = (String) attribute.get();
-						group.getSubject().setValue(attributeValue);
-						log.debug("Found attribute: " + attributeName + "=" + attributeValue);
-					}
-					if (attributeName.equalsIgnoreCase("cn")) {
-						log.debug("Found attribute: " + attributeName + "=" + attributeValue);
-						attributeValue = (String) attribute.get();
-						// only set if we don't have it from descption
-						if (group.getGroupName() == null) {
-							group.setGroupName(attributeValue);
-						}
-					}
-					if (attributeName.equalsIgnoreCase("description")) {
-						attributeValue = (String) attribute.get();
-						group.setGroupName(attributeValue);
-						log.debug("Found attribute: " + attributeName + "=" + attributeValue);
-					}
-					if (attributeName.equalsIgnoreCase("owner")) {
-						items = (NamingEnumeration<String>) attribute.getAll();
-						while (items.hasMore()) {
-							attributeValue = items.next();
-							log.debug("Found attribute: " + attributeName + "=" + attributeValue);
-							
-							// either the dn or look up the subject as housed in UID
-							String subjectId = attributeValue;
-							List<Object> uids = this.getAttributeValues(dirContext, attributeValue, "uid");
-							if (uids != null && uids.size() > 0) {
-								subjectId = uids.get(0).toString();
-							} else {
-								subjectId = CertificateManager.getInstance().standardizeDN(attributeValue);
-							}
-							
-							Subject owner = new Subject();
-							owner.setValue(subjectId);
-							group.addRightsHolder(owner);
-						}
-					}
-					if (attributeName.equalsIgnoreCase("uniqueMember")) {
-						items = (NamingEnumeration<String>) attribute.getAll();
-						while (items.hasMore()) {
-							attributeValue = items.next();
-							
-							// either the dn or look up the subject as housed in UID
-							String subjectId = attributeValue;
-							List<Object> uids = this.getAttributeValues(dirContext, attributeValue, "uid");
-							if (uids != null && uids.size() > 0) {
-								subjectId = uids.get(0).toString();
-							} else {
-								subjectId = CertificateManager.getInstance().standardizeDN(attributeValue);
-							}
-							
-							Subject member = new Subject();
-							member.setValue(subjectId);
-							group.addHasMember(member);
-							
-							// look up details for this Group member?
-							if (recurse) {
-								// only one level of recursion for groups
-								SubjectInfo groupInfo = null;
-								try {
-									groupInfo = this.getSubjectInfo(dirContext, null, member, false, visitedSubjects);
-								} catch (NotFound nf) {
-									log.warn("could not find member DN: " + subjectId);
-									continue;
-								}
-								
-								// has people as members?
-								if (groupInfo.getPersonList() != null) {
-									for (Person p: groupInfo.getPersonList()) {
-										if (!contains(pList.getPersonList(), p)) {
-											pList.addPerson(p);
-										}
-									}
-								}
-								// has other groups as members?
-								if (groupInfo.getGroupList() != null) {
-									for (Group g: groupInfo.getGroupList()) {
-										if (!contains(pList.getGroupList(), g)) {
-											pList.addGroup(g);
-										}
-									}
-								}
-							}
-						}
-					}
-				}
-				// only add if we don't already have it in the group list (from recursion)
-				if (!contains(pList.getGroupList(), group)) {
-					pList.getGroupList().add(0, group);
-				}
+		        if (attributeName.equalsIgnoreCase("uid")) {
+		            attributeValue = (String) attribute.get();
+		            group.getSubject().setValue(attributeValue);
+		            if (log.isDebugEnabled()) 
+		                log.debug("Found attribute: " + attributeName + "=" + attributeValue);
+		        }
+		        if (attributeName.equalsIgnoreCase("cn")) {
+		            if (log.isDebugEnabled()) 
+		                log.debug("Found attribute: " + attributeName + "=" + attributeValue);
+		            attributeValue = (String) attribute.get();
+		            // only set if we don't have it from descption
+		            if (group.getGroupName() == null) {
+		                group.setGroupName(attributeValue);
+		            }
+		        }
+		        if (attributeName.equalsIgnoreCase("description")) {
+		            attributeValue = (String) attribute.get();
+		            group.setGroupName(attributeValue);
+		            if (log.isDebugEnabled()) 
+		                log.debug("Found attribute: " + attributeName + "=" + attributeValue);
+		        }
+		        if (attributeName.equalsIgnoreCase("owner")) {
+		            items = (NamingEnumeration<String>) attribute.getAll();
+		            while (items.hasMore()) {
+		                attributeValue = items.next();
+		                if (log.isDebugEnabled()) 
+		                    log.debug("Found attribute: " + attributeName + "=" + attributeValue);
 
-			} else {
-				// process as a person
-				Person person = new Person();
-				Subject subject = new Subject();
-				subject.setValue(name); // will replace with UID attribute
-				person.setSubject(subject);
+		                // either the dn or look up the subject as housed in UID
+		                String subjectId = attributeValue;
+		                List<Object> uids = this.getAttributeValues(dirContext, attributeValue, "uid");
+		                if (uids != null && uids.size() > 0) {
+		                    subjectId = uids.get(0).toString();
+		                } else {
+		                    subjectId = CertificateManager.getInstance().standardizeDN(attributeValue);
+		                }
 
-				while (values.hasMore()) {
-					Attribute attribute = values.next();
-					String attributeName = attribute.getID();
-					String attributeValue = null;
+		                Subject owner = new Subject();
+		                owner.setValue(subjectId);
+		                group.addRightsHolder(owner);
+		            }
+		        }
+		        if (attributeName.equalsIgnoreCase("uniqueMember")) {
+		            items = (NamingEnumeration<String>) attribute.getAll();
+		            while (items.hasMore()) {
+		                attributeValue = items.next();
 
-					if (attributeName.equalsIgnoreCase("uid")) {
-						attributeValue = (String) attribute.get();
-						log.debug("Found attribute: " + attributeName + "=" + attributeValue);
-						person.getSubject().setValue(attributeValue);
-					}
-					if (attributeName.equalsIgnoreCase("cn")) {
-						attributeValue = (String) attribute.get();
-						log.debug("Found attribute: " + attributeName + "=" + attributeValue);
-					}
-					if (attributeName.equalsIgnoreCase("sn")) {
-						attributeValue = (String) attribute.get();
-						person.setFamilyName(attributeValue);
-						log.debug("Found attribute: " + attributeName + "=" + attributeValue);
-					}
-					if (attributeName.equalsIgnoreCase("mail")) {
-						// should email be redacted?
-						if (!redact) {
-							items = (NamingEnumeration<String>) attribute.getAll();
-							while (items.hasMore()) {
-								attributeValue = items.next();
-								person.addEmail(attributeValue);
-								log.debug("Found attribute: " + attributeName + "=" + attributeValue);
-							}
-						}
-						
-					}
-					if (attributeName.equalsIgnoreCase("givenName")) {
-						items = (NamingEnumeration<String>) attribute.getAll();
-						while (items.hasMore()) {
-							attributeValue = items.next();
-							person.addGivenName(attributeValue);
-							log.debug("Found attribute: " + attributeName + "=" + attributeValue);
-						}
-					}
-					if (attributeName.equalsIgnoreCase("isVerified")) {
-						attributeValue = (String) attribute.get();
-						person.setVerified(Boolean.parseBoolean(attributeValue));
-						log.debug("Found attribute: " + attributeName + "=" + attributeValue);
-					}
-					// do we care about the requests or just the confirmed ones?
-					if (equivalentIdentityRequestsOnly) {
-						if (attributeName.equalsIgnoreCase("equivalentIdentityRequest")) {
-							items = (NamingEnumeration<String>) attribute.getAll();
-							while (items.hasMore()) {
-								attributeValue = items.next();						
-								
+		                // either the dn or look up the subject as housed in UID
+		                String subjectId = attributeValue;
+		                List<Object> uids = this.getAttributeValues(dirContext, attributeValue, "uid");
+		                if (uids != null && uids.size() > 0) {
+		                    subjectId = uids.get(0).toString();
+		                } else {
+		                    subjectId = CertificateManager.getInstance().standardizeDN(attributeValue);
+		                }
 
-								// try to look it up
-								Subject equivalentIdentityRequest = new Subject();														     
-								equivalentIdentityRequest.setValue(attributeValue);
-								log.debug("Found attribute: " + attributeName + "=" + attributeValue);
-								
-								// add this identity to the subject list?
-								if (recurse) {
-									// if we have recursed back to the original identity, then skip it
-									if (visitedSubjects != null && visitedSubjects.contains(equivalentIdentityRequest.getValue())) {
-										continue;
-									}
-									// catch the NotFound in case we only have the subject's DN
-									try {
-										// do not recurse for equivalent identity requests
-										SubjectInfo equivalentIdentityRequestInfo = this.getSubjectInfo(dirContext, null, equivalentIdentityRequest, false, visitedSubjects);
-										if (equivalentIdentityRequestInfo.getPersonList() != null) {
-											for (Person p: equivalentIdentityRequestInfo.getPersonList()) {
-												if (!contains(pList.getPersonList(), p)) {
-													pList.addPerson(p);
-												}
-											}
-										}
-										if (equivalentIdentityRequestInfo.getGroupList() != null) {
-											for (Group g: equivalentIdentityRequestInfo.getGroupList()) {
-												if (!contains(pList.getGroupList(), g)) {
-													pList.addGroup(g);
-												}
-											}
-										}
-									} catch (NotFound e) {
-										// ignore NotFound
-										log.warn("No account found for equivalentIdentityRequest entry: " + equivalentIdentityRequest.getValue(), e);
-										// still add this placeholder
-										Person placeholderPerson = new Person();
-										placeholderPerson.setSubject(equivalentIdentityRequest);
-										placeholderPerson.addEmail("NA");
-										placeholderPerson.addGivenName("NA");
-										placeholderPerson.setFamilyName("NA");
-										if (!contains(pList.getPersonList(), placeholderPerson)) {
-											pList.addPerson(placeholderPerson);
-										}
-									}
-								}
-							}
-						}
-					} else {
-						if (attributeName.equalsIgnoreCase("equivalentIdentity")) {
-							items = (NamingEnumeration<String>) attribute.getAll();
-							while (items.hasMore()) {
-								attributeValue = items.next();
-								String equivalentIdentityName = attributeValue;
-								// The name passed in that is the subject's value
-								// The equivalent identity should be treated in the 
-								// same way as the named subject, meaning that 
-								// the equivalent identity should be standardized as
-								// well (otherwise infinite recursion and StackOverflow)
-								
-								// convert to use the standardized string representation
-								try {
-								   equivalentIdentityName = CertificateManager.getInstance().standardizeDN(equivalentIdentityName);
-								} catch (IllegalArgumentException ex) {
-								// non-DNs are acceptable
-								}	
-							       
-					
-								log.debug("Found attribute: " + attributeName + "=" + equivalentIdentityName);
+		                Subject member = new Subject();
+		                member.setValue(subjectId);
+		                group.addHasMember(member);
 
-								Subject equivalentIdentity = new Subject();
-								
-								// add as equivalent
-								equivalentIdentity.setValue(equivalentIdentityName);
-								person.addEquivalentIdentity(equivalentIdentity);
-								
-								// add this identity to the subject list
-								if (recurse) {
-									// if we have recurse back to the original identity, then skip it
-									if (visitedSubjects != null && visitedSubjects.contains(equivalentIdentity.getValue())) {
-										continue;
-									}
-									// allow case where the identity is not found
-									try {
-										// recurse for equivalent identities
-										SubjectInfo equivalentIdentityInfo = this.getSubjectInfo(dirContext, null, equivalentIdentity, true, visitedSubjects);
-										if (equivalentIdentityInfo.getPersonList() != null) {
-											for (Person p: equivalentIdentityInfo.getPersonList()) {
-												if (!contains(pList.getPersonList(), p)) {
-													pList.addPerson(p);
-												}
-											}
-										}
-										if (equivalentIdentityInfo.getGroupList() != null) {
-											for (Group g: equivalentIdentityInfo.getGroupList()) {
-												if (!contains(pList.getGroupList(), g)) {
-													pList.addGroup(g);
-												}
-											}
-										}
-									} catch (NotFound e) {
-										// ignore NotFound
-										log.warn("No account found for equivalentIdentity entry: " + equivalentIdentity.getValue(), e);
-										// still add this placeholder
-										Person placeholderPerson = new Person();
-										placeholderPerson.setSubject(equivalentIdentity);
-										placeholderPerson.addEmail("NA");
-										placeholderPerson.addGivenName("NA");
-										placeholderPerson.setFamilyName("NA");
-										if (!contains(pList.getPersonList(), placeholderPerson)) {
-											pList.addPerson(placeholderPerson);
-										}
-									}
-								}
-							}
-						}
-					}
-					
-				}
-				
-				// group membership
-				List<Group> groups = lookupGroups(dirContext, name);
-				for (Group g: groups) {
-					person.addIsMemberOf(g.getSubject());
-					if (!contains(pList.getGroupList(), g)){
-						pList.getGroupList().add(g);
-					}
-				}
-				
-				// add as the first one in the list
-				if (!contains(pList.getPersonList(), person)) {
-					pList.getPersonList().add(0, person);
-				}
-			}
+		                // look up details for this Group member?
+		                if (recurse) {
+		                    // only one level of recursion for groups
+		                    SubjectInfo groupInfo = null;
+		                    try {
+		                        groupInfo = this.getSubjectInfo(dirContext, null, member, false, visitedSubjects);
+		                    } catch (NotFound nf) {
+		                        log.warn("could not find member DN: " + subjectId);
+		                        continue;
+		                    }
+
+		                    // has people as members?
+		                    if (groupInfo.getPersonList() != null) {
+		                        for (Person p: groupInfo.getPersonList()) {
+		                            if (!contains(pList.getPersonList(), p)) {
+		                                pList.addPerson(p);
+		                            }
+		                        }
+		                    }
+		                    // has other groups as members?
+		                    if (groupInfo.getGroupList() != null) {
+		                        for (Group g: groupInfo.getGroupList()) {
+		                            if (!contains(pList.getGroupList(), g)) {
+		                                pList.addGroup(g);
+		                            }
+		                        }
+		                    }
+		                }
+		            }
+		        }
+		    }
+		    // only add if we don't already have it in the group list (from recursion)
+		    if (!contains(pList.getGroupList(), group)) {
+		        pList.getGroupList().add(0, group);
+		    }
+
+		} else {
+		    // not a group...
+		    // process as a person
+		    Person person = new Person();
+		    Subject subject = new Subject();
+		    subject.setValue(name); // will replace with UID attribute
+		    person.setSubject(subject);
+
+		    while (values.hasMore()) {
+		        Attribute attribute = values.next();
+		        String attributeName = attribute.getID();
+		        String attributeValue = null;
+
+		        if (attributeName.equalsIgnoreCase("uid")) {
+		            attributeValue = (String) attribute.get();
+		            if (log.isDebugEnabled()) log.debug("Found attribute: " + attributeName + "=" + attributeValue);
+		            person.getSubject().setValue(attributeValue);
+		        }
+		        if (attributeName.equalsIgnoreCase("cn")) {
+		            attributeValue = (String) attribute.get();
+		            if (log.isDebugEnabled()) log.debug("Found attribute: " + attributeName + "=" + attributeValue);
+		        }
+		        if (attributeName.equalsIgnoreCase("sn")) {
+		            attributeValue = (String) attribute.get();
+		            person.setFamilyName(attributeValue);
+		            if (log.isDebugEnabled()) log.debug("Found attribute: " + attributeName + "=" + attributeValue);
+		        }
+		        if (attributeName.equalsIgnoreCase("mail")) {
+		            // should email be redacted?
+		            if (!redact) {
+		                items = (NamingEnumeration<String>) attribute.getAll();
+		                while (items.hasMore()) {
+		                    attributeValue = items.next();
+		                    person.addEmail(attributeValue);
+		                    if (log.isDebugEnabled()) log.debug("Found attribute: " + attributeName + "=" + attributeValue);
+		                }
+		            }
+
+		        }
+		        if (attributeName.equalsIgnoreCase("givenName")) {
+		            items = (NamingEnumeration<String>) attribute.getAll();
+		            while (items.hasMore()) {
+		                attributeValue = items.next();
+		                person.addGivenName(attributeValue);
+		                if (log.isDebugEnabled()) log.debug("Found attribute: " + attributeName + "=" + attributeValue);
+		            }
+		        }
+		        if (attributeName.equalsIgnoreCase("isVerified")) {
+		            attributeValue = (String) attribute.get();
+		            person.setVerified(Boolean.parseBoolean(attributeValue));
+		            if (log.isDebugEnabled()) log.debug("Found attribute: " + attributeName + "=" + attributeValue);
+		        }
+		        // do we care about the requests or just the confirmed ones?
+		        if (equivalentIdentityRequestsOnly) {
+		            if (attributeName.equalsIgnoreCase("equivalentIdentityRequest")) {
+		                items = (NamingEnumeration<String>) attribute.getAll();
+		                while (items.hasMore()) {
+		                    attributeValue = items.next();						
+
+
+		                    // try to look it up
+		                    Subject equivalentIdentityRequest = new Subject();														     
+		                    equivalentIdentityRequest.setValue(attributeValue);
+		                    if (log.isDebugEnabled()) log.debug("Found attribute: " + attributeName + "=" + attributeValue);
+
+		                    // add this identity to the subject list?
+		                    if (recurse) {
+		                        // if we have recursed back to the original identity, then skip it
+		                        if (visitedSubjects != null && visitedSubjects.contains(equivalentIdentityRequest.getValue())) {
+		                            continue;
+		                        }
+		                        // catch the NotFound in case we only have the subject's DN
+		                        try {
+		                            // do not recurse for equivalent identity requests
+		                            SubjectInfo equivalentIdentityRequestInfo = this.getSubjectInfo(dirContext, null, equivalentIdentityRequest, false, visitedSubjects);
+		                            if (equivalentIdentityRequestInfo.getPersonList() != null) {
+		                                for (Person p: equivalentIdentityRequestInfo.getPersonList()) {
+		                                    if (!contains(pList.getPersonList(), p)) {
+		                                        pList.addPerson(p);
+		                                    }
+		                                }
+		                            }
+		                            if (equivalentIdentityRequestInfo.getGroupList() != null) {
+		                                for (Group g: equivalentIdentityRequestInfo.getGroupList()) {
+		                                    if (!contains(pList.getGroupList(), g)) {
+		                                        pList.addGroup(g);
+		                                    }
+		                                }
+		                            }
+		                        } catch (NotFound e) {
+		                            // ignore NotFound
+		                            log.warn("No account found for equivalentIdentityRequest entry: " + equivalentIdentityRequest.getValue(), e);
+		                            // still add this placeholder
+		                            Person placeholderPerson = new Person();
+		                            placeholderPerson.setSubject(equivalentIdentityRequest);
+		                            placeholderPerson.addEmail("NA");
+		                            placeholderPerson.addGivenName("NA");
+		                            placeholderPerson.setFamilyName("NA");
+		                            if (!contains(pList.getPersonList(), placeholderPerson)) {
+		                                pList.addPerson(placeholderPerson);
+		                            }
+		                        }
+		                    }
+		                }
+		            }
+		        } else if (attributeName.equalsIgnoreCase("equivalentIdentity")) {
+		            items = (NamingEnumeration<String>) attribute.getAll();
+		            while (items.hasMore()) {
+		                attributeValue = items.next();
+		                String equivalentIdentityName = attributeValue;
+		                // The name passed in that is the subject's value
+		                // The equivalent identity should be treated in the 
+		                // same way as the named subject, meaning that 
+		                // the equivalent identity should be standardized as
+		                // well (otherwise infinite recursion and StackOverflow)
+
+		                // convert to use the standardized string representation
+		                try {
+		                    equivalentIdentityName = CertificateManager.getInstance().standardizeDN(equivalentIdentityName);
+		                } catch (IllegalArgumentException ex) {
+		                    // non-DNs are acceptable
+		                }	
+
+
+		                if (log.isDebugEnabled()) log.debug("Found attribute: " + attributeName + "=" + equivalentIdentityName);
+
+		                Subject equivalentIdentity = new Subject();
+
+		                // add as equivalent
+		                equivalentIdentity.setValue(equivalentIdentityName);
+		                person.addEquivalentIdentity(equivalentIdentity);
+
+		                // add this identity to the subject list
+		                if (recurse) {
+		                    // if we have recurse back to the original identity, then skip it
+		                    if (visitedSubjects != null && visitedSubjects.contains(equivalentIdentity.getValue())) {
+		                        continue;
+		                    }
+		                    // allow case where the identity is not found
+		                    try {
+		                        // recurse for equivalent identities
+		                        SubjectInfo equivalentIdentityInfo = this.getSubjectInfo(dirContext, null, equivalentIdentity, true, visitedSubjects);
+		                        if (equivalentIdentityInfo.getPersonList() != null) {
+		                            for (Person p: equivalentIdentityInfo.getPersonList()) {
+		                                if (!contains(pList.getPersonList(), p)) {
+		                                    pList.addPerson(p);
+		                                }
+		                            }
+		                        }
+		                        if (equivalentIdentityInfo.getGroupList() != null) {
+		                            for (Group g: equivalentIdentityInfo.getGroupList()) {
+		                                if (!contains(pList.getGroupList(), g)) {
+		                                    pList.addGroup(g);
+		                                }
+		                            }
+		                        }
+		                    } catch (NotFound e) {
+		                        // ignore NotFound
+		                        log.warn("No account found for equivalentIdentity entry: " + equivalentIdentity.getValue(), e);
+		                        // still add this placeholder
+		                        Person placeholderPerson = new Person();
+		                        placeholderPerson.setSubject(equivalentIdentity);
+		                        placeholderPerson.addEmail("NA");
+		                        placeholderPerson.addGivenName("NA");
+		                        placeholderPerson.setFamilyName("NA");
+		                        if (!contains(pList.getPersonList(), placeholderPerson)) {
+		                            pList.addPerson(placeholderPerson);
+		                        }
+		                    }
+		                }
+		            }
+		        }
+		    }
+
+		    // group membership
+		    List<Group> groups = lookupGroups(dirContext, name);
+		    for (Group g: groups) {
+		        person.addIsMemberOf(g.getSubject());
+		        if (!contains(pList.getGroupList(), g)){
+		            pList.getGroupList().add(g);
+		        }
+		    }
+
+		    // add as the first one in the list
+		    if (!contains(pList.getPersonList(), person)) {
+		        pList.getPersonList().add(0, person);
+		    }
 		}
 
 		return pList;
@@ -1523,7 +1531,8 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 				mods[0] = new ModificationItem(DirContext.REMOVE_ATTRIBUTE, mod0);
 				// make the change
 				dirContext.modifyAttributes(new LdapName(dn), mods);
-				log.debug("Successfully removed equivalentIdentityRequest on: " + primarySubject.getValue() + " for " + secondarySubject.getValue());
+				if (log.isDebugEnabled()) 
+				    log.debug("Successfully removed equivalentIdentityRequest on: " + primarySubject.getValue() + " for " + secondarySubject.getValue());
 			}
 	
 		} catch (Exception e) {
@@ -1545,16 +1554,19 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 		// check redaction policy
 		boolean redact = shouldRedact(session);
 		if (redact) {
-			if (session != null) {
-				log.debug("subjectInfo requested for: '" + subject.getValue() + "'");
-				log.debug("checking if redaction holds for the calling user: '" + session.getSubject().getValue() + "'");
-			} else {
-				log.debug("session is null, we will redact email");
-			}
+		    if (log.isDebugEnabled()) {
+		        if (session != null) {
+		            log.debug("subjectInfo requested for: '" + subject.getValue() + "'");
+		            log.debug("checking if redaction holds for the calling user: '" + session.getSubject().getValue() + "'");
+		        } else {
+		            log.debug("session is null, we will redact email");
+		        }
+		    }
 			
 			//if we are looking up our own info then don't redact
 			if (session != null && session.getSubject().equals(subject)) {
-				log.debug("subject MATCH. lifting redaction for the calling user: '" + session.getSubject().getValue() + "'");
+			    if (log.isDebugEnabled()) 
+			        log.debug("subject MATCH. lifting redaction for the calling user: '" + session.getSubject().getValue() + "'");
 				redact = false;
 			}
 		}
@@ -1582,7 +1594,7 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 			visitedSubjects.add(dn);
 			// include the equivalent identity requests only
 			subjectInfo = processAttributes(dirContext, dn, attributes, true, true, redact, visitedSubjects);
-			log.debug("Retrieved SubjectList for: " + dn);
+			if (log.isDebugEnabled()) log.debug("Retrieved SubjectList for: " + dn);
 		} catch (Exception e) {
 			String msg = "Problem looking up entry: " + dn + " : " + e.getMessage();
 			log.error(msg, e);
@@ -1638,7 +1650,8 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 					mods[0] = new ModificationItem(DirContext.REMOVE_ATTRIBUTE, mod0);
 					// make the change
 					dirContext.modifyAttributes(new LdapName(dn), mods);
-					log.debug("Successfully removed equivalentIdentity: " + primarySubject.getValue() + " = " + secondarySubject.getValue());
+					if (log.isDebugEnabled()) 
+					    log.debug("Successfully removed equivalentIdentity: " + primarySubject.getValue() + " = " + secondarySubject.getValue());
 				}
 				
 				// remove attribute on secondarySubject
@@ -1648,7 +1661,8 @@ public class CNIdentityLDAPImpl extends LDAPService implements CNIdentity {
 					mods[0] = new ModificationItem(DirContext.REMOVE_ATTRIBUTE, mod0);
 					// make the change
 					dirContext.modifyAttributes(new LdapName(dn2), mods);
-					log.debug("Successfully removed reciprocal equivalentIdentity: " + secondarySubject.getValue() + " = " + primarySubject.getValue());
+					if (log.isDebugEnabled()) 
+					    log.debug("Successfully removed reciprocal equivalentIdentity: " + secondarySubject.getValue() + " = " + primarySubject.getValue());
 				}
 			
 		    } else {
